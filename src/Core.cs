@@ -590,17 +590,17 @@ namespace RedmiHelper
                         g.DrawString(rpm.ToString(), f, tb, L + w + 3, y - 7 * sc);
                     }
                 }
-                g.DrawString(L.T("最近 10 分钟", "Last 10 min"), f, tb, L, T + h + 1);
+                g.DrawString(RedmiHelper.L.T("最近 10 分钟", "Last 10 min"), f, tb, L, T + h + 1);
 
                 // 图例
                 float lx = L;
-                lx = Legend(g, f, lx, 3, Color.FromArgb(230, 70, 60), L.T("CPU 温度", "CPU temp"));
-                lx = Legend(g, f, lx, 3, Color.FromArgb(160, 100, 230), L.T("GPU 温度", "GPU temp"));
-                Legend(g, f, lx, 3, Color.FromArgb(40, 140, 240), L.T("风扇A 转速", "Fan A"));
+                lx = Legend(g, f, lx, 3, Color.FromArgb(230, 70, 60), RedmiHelper.L.T("CPU 温度", "CPU temp"));
+                lx = Legend(g, f, lx, 3, Color.FromArgb(160, 100, 230), RedmiHelper.L.T("GPU 温度", "GPU temp"));
+                Legend(g, f, lx, 3, Color.FromArgb(40, 140, 240), RedmiHelper.L.T("风扇A 转速", "Fan A"));
 
                 if (Data == null || Data.Count < 2)
                 {
-                    g.DrawString(L.T("正在收集数据……", "Collecting data..."), f, tb, L + w / 2 - 40 * sc, T + h / 2);
+                    g.DrawString(RedmiHelper.L.T("正在收集数据……", "Collecting data..."), f, tb, L + w / 2 - 40 * sc, T + h / 2);
                     return;
                 }
 
