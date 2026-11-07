@@ -34,7 +34,7 @@ namespace RedmiHelper
         {
             ManagementClass mc = new ManagementClass(@"root\wmi", "MICommonInterface", null);
             foreach (ManagementObject o in mc.GetInstances()) { inst = o; break; }
-            if (inst == null) throw new Exception("找不到 MICommonInterface 接口");
+            if (inst == null) throw new Exception(L.T("找不到 MICommonInterface 接口", "MICommonInterface not found"));
         }
 
         static byte[] Call(byte op, byte fn, byte b4, byte b6)
@@ -68,6 +68,22 @@ namespace RedmiHelper
         {
             return r != null && r.Length >= 2 && r[1] == 128;
         }
+    }
+
+    // ===== 界面语言：0 跟随系统，1 中文，2 English（重启生效） =====
+    static class L
+    {
+        public static readonly bool En;
+
+        static L()
+        {
+            int c = Settings.GetInt("Lang", 0);
+            if (c == 1) En = false;
+            else if (c == 2) En = true;
+            else En = !System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static string T(string zh, string en) { return En ? en : zh; }
     }
 
     // ===== 设置（存在注册表 HKCU\Software\RedmiHelper） =====
@@ -237,7 +253,7 @@ namespace RedmiHelper
         [DllImport("powrprof.dll")] static extern uint PowerSetActiveOverlayScheme(ref Guid overlay);
         [DllImport("powrprof.dll")] static extern uint PowerGetEffectiveOverlayScheme(out Guid overlay);
 
-        public static readonly string[] Names = { "最佳能效", "平衡", "最佳性能" };
+        public static readonly string[] Names = { L.T("最佳能效", "Efficiency"), L.T("平衡", "Balanced"), L.T("最佳性能", "Performance") };
         static readonly Guid[] Guids = {
             new Guid("961cc777-2547-4f9d-8174-7d86181b8a7a"),
             Guid.Empty,
@@ -383,15 +399,15 @@ namespace RedmiHelper
             try
             {
                 string o = Run("--query-gpu=name,utilization.gpu,power.draw,clocks.gr,memory.used,memory.total,temperature.gpu --format=csv,noheader,nounits");
-                if (o == null) return "未找到 nvidia-smi（需要安装 NVIDIA 驱动）";
+                if (o == null) return L.T("未找到 nvidia-smi（需要安装 NVIDIA 驱动）", "nvidia-smi not found (install the NVIDIA driver)");
                 string line = o.Trim().Split('\n')[0];
                 string[] f = line.Split(',');
                 if (f.Length < 7) return line;
                 for (int i = 0; i < f.Length; i++) f[i] = f[i].Trim();
-                return f[0] + "\n占用 " + f[1] + "%  ·  功耗 " + Watt(f[2]) + "  ·  " + f[6] + "°C\n" +
-                       "核心 " + f[3] + " MHz  ·  显存 " + f[4] + " / " + f[5] + " MB";
+                return f[0] + L.T("\n占用 ", "\nLoad ") + f[1] + L.T("%  ·  功耗 ", "%  ·  Power ") + Watt(f[2]) + "  ·  " + f[6] + "°C\n" +
+                       L.T("核心 ", "Core ") + f[3] + L.T(" MHz  ·  显存 ", " MHz  ·  VRAM ") + f[4] + " / " + f[5] + " MB";
             }
-            catch (Exception ex) { return "读取失败：" + ex.Message; }
+            catch (Exception ex) { return L.T("读取失败：", "Read failed: ") + ex.Message; }
         }
 
         // 解析 nvidia-smi 默认输出里的进程表
@@ -416,11 +432,11 @@ namespace RedmiHelper
                     catch { name = Path.GetFileNameWithoutExtension(m.Groups[3].Value.Trim().TrimStart('.')); }
                     if (name.Length > 0 && !names.Contains(name)) names.Add(name);
                 }
-                if (names.Count == 0) return "（没有，独显可能在休眠）";
-                if (names.Count > 8) return string.Join("、", names.GetRange(0, 8).ToArray()) + " 等 " + names.Count + " 个";
-                return string.Join("、", names.ToArray());
+                if (names.Count == 0) return L.T("（没有，独显可能在休眠）", "(none, dGPU may be asleep)");
+                if (names.Count > 8) return string.Join(L.T("、", ", "), names.GetRange(0, 8).ToArray()) + L.T(" 等 ", " and ") + names.Count + L.T(" 个", " more");
+                return string.Join(L.T("、", ", "), names.ToArray());
             }
-            catch (Exception ex) { return "读取失败：" + ex.Message; }
+            catch (Exception ex) { return L.T("读取失败：", "Read failed: ") + ex.Message; }
         }
     }
 
@@ -444,11 +460,11 @@ namespace RedmiHelper
             double design = Q("BatteryStaticData", "DesignedCapacity");
             double full = Q("BatteryFullChargedCapacity", "FullChargedCapacity");
             double cyc = Q("BatteryCycleCount", "CycleCount");
-            if (design <= 0 || full <= 0) return "读取不到电池信息";
+            if (design <= 0 || full <= 0) return L.T("读取不到电池信息", "Battery info unavailable");
             double health = full / design * 100.0;
-            return "设计容量 " + (design / 1000).ToString("0.0") + "Wh  ·  当前满电 " + (full / 1000).ToString("0.0") + "Wh\n" +
-                   "健康度 " + health.ToString("0.0") + "%（损耗 " + Math.Max(0, 100 - health).ToString("0.0") + "%）  ·  " +
-                   "循环 " + (cyc > 0 ? cyc.ToString("0") + " 次" : "--");
+            return L.T("设计容量 ", "Design ") + (design / 1000).ToString("0.0") + L.T("Wh  ·  当前满电 ", "Wh  ·  Full charge ") + (full / 1000).ToString("0.0") + "Wh\n" +
+                   L.T("健康度 ", "Health ") + health.ToString("0.0") + L.T("%（损耗 ", "% (wear ") + Math.Max(0, 100 - health).ToString("0.0") + L.T("%）  ·  ", "%)  ·  ") +
+                   L.T("循环 ", "Cycles ") + (cyc > 0 ? cyc.ToString("0") + L.T(" 次", "") : "--");
         }
     }
 
@@ -574,17 +590,17 @@ namespace RedmiHelper
                         g.DrawString(rpm.ToString(), f, tb, L + w + 3, y - 7 * sc);
                     }
                 }
-                g.DrawString("最近 10 分钟", f, tb, L, T + h + 1);
+                g.DrawString(L.T("最近 10 分钟", "Last 10 min"), f, tb, L, T + h + 1);
 
                 // 图例
                 float lx = L;
-                lx = Legend(g, f, lx, 3, Color.FromArgb(230, 70, 60), "CPU 温度");
-                lx = Legend(g, f, lx, 3, Color.FromArgb(160, 100, 230), "GPU 温度");
-                Legend(g, f, lx, 3, Color.FromArgb(40, 140, 240), "风扇A 转速");
+                lx = Legend(g, f, lx, 3, Color.FromArgb(230, 70, 60), L.T("CPU 温度", "CPU temp"));
+                lx = Legend(g, f, lx, 3, Color.FromArgb(160, 100, 230), L.T("GPU 温度", "GPU temp"));
+                Legend(g, f, lx, 3, Color.FromArgb(40, 140, 240), L.T("风扇A 转速", "Fan A"));
 
                 if (Data == null || Data.Count < 2)
                 {
-                    g.DrawString("正在收集数据……", f, tb, L + w / 2 - 40 * sc, T + h / 2);
+                    g.DrawString(L.T("正在收集数据……", "Collecting data..."), f, tb, L + w / 2 - 40 * sc, T + h / 2);
                     return;
                 }
 

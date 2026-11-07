@@ -58,7 +58,7 @@ namespace RedmiHelper
             Controls.Add(lblInfo);
 
             Button open = new Button();
-            open.Text = "打开完整窗口";
+            open.Text = L.T("打开完整窗口", "Open full window");
             open.FlatStyle = FlatStyle.Flat;
             open.Location = P(12, 110);
             open.Size = Z(276, 30);
@@ -107,7 +107,7 @@ namespace RedmiHelper
 
         public GamesForm(string[] games, int mode, string[] modeNames, float sc)
         {
-            Text = "游戏列表";
+            Text = L.T("游戏列表", "Game list");
             AutoScaleMode = AutoScaleMode.None;
             Font = new Font("Microsoft YaHei UI", 9F);
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -116,7 +116,7 @@ namespace RedmiHelper
             ClientSize = new Size((int)(320 * sc), (int)(330 * sc));
 
             Label tip = new Label();
-            tip.Text = "下面这些程序运行时，自动切换到：";
+            tip.Text = L.T("下面这些程序运行时，自动切换到：", "When any of these run, switch to:");
             tip.Location = new Point((int)(12 * sc), (int)(14 * sc));
             tip.Size = new Size((int)(200 * sc), (int)(22 * sc));
             Controls.Add(tip);
@@ -137,7 +137,7 @@ namespace RedmiHelper
             Controls.Add(list);
 
             Button add = new Button();
-            add.Text = "添加游戏…";
+            add.Text = L.T("添加游戏…", "Add game...");
             add.FlatStyle = FlatStyle.Flat;
             add.Location = new Point((int)(12 * sc), (int)(276 * sc));
             add.Size = new Size((int)(96 * sc), (int)(32 * sc));
@@ -145,8 +145,8 @@ namespace RedmiHelper
             {
                 using (OpenFileDialog d = new OpenFileDialog())
                 {
-                    d.Filter = "程序 (*.exe)|*.exe";
-                    d.Title = "选择游戏的 exe 文件";
+                    d.Filter = L.T("程序 (*.exe)|*.exe", "Programs (*.exe)|*.exe");
+                    d.Title = L.T("选择游戏的 exe 文件", "Choose the game .exe");
                     if (d.ShowDialog(this) == DialogResult.OK)
                     {
                         string n = System.IO.Path.GetFileNameWithoutExtension(d.FileName);
@@ -157,7 +157,7 @@ namespace RedmiHelper
             Controls.Add(add);
 
             Button del = new Button();
-            del.Text = "删除";
+            del.Text = L.T("删除", "Remove");
             del.FlatStyle = FlatStyle.Flat;
             del.Location = new Point((int)(114 * sc), (int)(276 * sc));
             del.Size = new Size((int)(70 * sc), (int)(32 * sc));
@@ -165,7 +165,7 @@ namespace RedmiHelper
             Controls.Add(del);
 
             Button ok = new Button();
-            ok.Text = "保存";
+            ok.Text = L.T("保存", "Save");
             ok.FlatStyle = FlatStyle.Flat;
             ok.Location = new Point((int)(228 * sc), (int)(276 * sc));
             ok.Size = new Size((int)(80 * sc), (int)(32 * sc));
@@ -192,7 +192,7 @@ namespace RedmiHelper
             {
                 if (!created)
                 {
-                    MessageBox.Show("Redmi Helper 已经在运行了，看看右下角托盘。");
+                    MessageBox.Show(L.T("Redmi Helper 已经在运行了，看看右下角托盘。", "Redmi Helper is already running (check the tray)."));
                     return;
                 }
                 Application.EnableVisualStyles();
@@ -200,7 +200,7 @@ namespace RedmiHelper
                 try { Mi.Init(); }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("初始化失败：" + ex.Message + "\n请确认是以管理员身份运行的，并且这台电脑是 Redmi G Pro 2022。");
+                    MessageBox.Show(L.T("初始化失败：", "Initialization failed: ") + ex.Message + L.T("\n请确认是以管理员身份运行的，并且这台电脑是 Redmi G Pro 2022。", "\nMake sure it runs as administrator on a Redmi G Pro 2022."));
                     return;
                 }
                 bool hidden = args.Length > 0 && args[0] == "/tray";

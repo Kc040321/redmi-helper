@@ -18,9 +18,9 @@ namespace RedmiHelper
 {
     class MainForm : Form
     {
-        public const string Version = "1.1";
+        public const string Version = "1.2";
 
-        public static readonly string[] ModeNames = { "静谧", "均衡", "极速", "狂派" };
+        public static readonly string[] ModeNames = { L.T("静谧", "Silent"), L.T("均衡", "Balanced"), L.T("极速", "Turbo"), L.T("狂派", "Beast") };
         static readonly byte[] ModeValues = { 2, 1, 3, 4 };
         public static readonly Color[] ModeColors = {
             Color.FromArgb(46, 160, 67),   // 静谧 绿
@@ -28,10 +28,10 @@ namespace RedmiHelper
             Color.FromArgb(219, 109, 40),  // 极速 橙
             Color.FromArgb(207, 34, 46)    // 狂派 红
         };
-        static readonly string[] GpuNames = { "混合模式", "独显直连" };
+        static readonly string[] GpuNames = { L.T("混合模式", "Hybrid"), L.T("独显直连", "dGPU only") };
         static readonly Color GpuColor = Color.FromArgb(110, 84, 200);
         static readonly Color PowerColor = Color.FromArgb(0, 135, 140);
-        static readonly string[] TabNames = { "主页", "监控", "自动", "设置" };
+        static readonly string[] TabNames = { L.T("主页", "Home"), L.T("监控", "Monitor"), L.T("自动", "Auto"), L.T("设置", "Settings") };
 
         [DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr handle);
         [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr hWnd, int id, uint mods, uint vk);
@@ -52,7 +52,7 @@ namespace RedmiHelper
         Button[] powerButtons = new Button[3];
         ToolStripMenuItem[] modeItems = new ToolStripMenuItem[4];
         CheckBox chkFn, chkTouchpad, chkWin, chkBattery, chkHz, chkLink, chkAuto, chkSmart, chkSched, chkCsv, chkTurboOff, chkTurboAuto;
-        ComboBox cmbLow, cmbHigh, cmbSched, cmbTheme;
+        ComboBox cmbLow, cmbHigh, cmbSched, cmbTheme, cmbLang;
         NumericUpDown nSh, nSm, nEh, nEm;
         Graph graph;
         NotifyIcon tray;
@@ -100,9 +100,9 @@ namespace RedmiHelper
             // 顶部：温度 / 风扇 / 电池（所有页面都显示）
             lblCpu = AddLabel(this, "CPU  --°C", 16, 10, 150, 30, fBig, null);
             lblGpu = AddLabel(this, "GPU  --°C", 176, 10, 150, 30, fBig, null);
-            lblFanA = AddLabel(this, "风扇A  -- RPM", 16, 42, 150, 22, null, null);
-            lblFanB = AddLabel(this, "风扇B  -- RPM", 176, 42, 150, 22, null, null);
-            lblBat = AddLabel(this, "电池 --", 16, 64, 310, 22, null, "gray");
+            lblFanA = AddLabel(this, L.T("风扇A  -- RPM", "Fan A  -- RPM"), 16, 42, 150, 22, null, null);
+            lblFanB = AddLabel(this, L.T("风扇B  -- RPM", "Fan B  -- RPM"), 176, 42, 150, 22, null, null);
+            lblBat = AddLabel(this, L.T("电池 --", "Battery --"), 16, 64, 310, 22, null, "gray");
 
             // 分页按钮
             for (int i = 0; i < 4; i++)
@@ -220,7 +220,7 @@ namespace RedmiHelper
 
         void BuildHome(Panel p)
         {
-            AddLabel(p, "性能模式　（快捷键 Ctrl+Alt+M 循环切换）", 16, 0, 310, 22, fHead, null);
+            AddLabel(p, L.T("性能模式　（快捷键 Ctrl+Alt+M 循环切换）", "Performance mode  (Ctrl+Alt+M to cycle)"), 16, 0, 310, 22, fHead, null);
             for (int i = 0; i < 4; i++)
             {
                 Button b = AddButton(p, ModeNames[i], 12 + i * 80, 24, 76, 36, i);
@@ -228,7 +228,7 @@ namespace RedmiHelper
                 modeButtons[i] = b;
             }
 
-            AddLabel(p, "显卡模式", 16, 72, 200, 22, fHead, null);
+            AddLabel(p, L.T("显卡模式", "GPU mode"), 16, 72, 200, 22, fHead, null);
             for (int i = 0; i < 2; i++)
             {
                 Button b = AddButton(p, GpuNames[i], 12 + i * 160, 96, 156, 36, i);
@@ -237,7 +237,7 @@ namespace RedmiHelper
             }
             lblGpuNote = AddLabel(p, "", 16, 136, 310, 22, null, "red");
 
-            AddLabel(p, "Windows 电源模式", 16, 162, 200, 22, fHead, null);
+            AddLabel(p, L.T("Windows 电源模式", "Windows power mode"), 16, 162, 200, 22, fHead, null);
             for (int i = 0; i < 3; i++)
             {
                 Button b = AddButton(p, PowerMode.Names[i], 12 + i * 107, 186, 102, 36, i);
@@ -245,21 +245,21 @@ namespace RedmiHelper
                 powerButtons[i] = b;
             }
 
-            AddLabel(p, "按键", 16, 234, 200, 22, fHead, null);
-            chkFn = AddCheck(p, "Fn 锁", 16, 258);
-            chkTouchpad = AddCheck(p, "锁触控板", 120, 258);
-            chkWin = AddCheck(p, "锁 Win 键", 228, 258);
-            chkFn.CheckedChanged += delegate { if (!updatingUI) SetKey(Mi.KEY_FN, chkFn.Checked, "Fn 锁"); };
-            chkTouchpad.CheckedChanged += delegate { if (!updatingUI) SetKey(Mi.KEY_TOUCHPAD, chkTouchpad.Checked, "触控板锁"); };
-            chkWin.CheckedChanged += delegate { if (!updatingUI) SetKey(Mi.KEY_WIN, chkWin.Checked, "Win 键锁"); };
+            AddLabel(p, L.T("按键", "Keys"), 16, 234, 200, 22, fHead, null);
+            chkFn = AddCheck(p, L.T("Fn 锁", "Fn lock"), 16, 258);
+            chkTouchpad = AddCheck(p, L.T("锁触控板", "Lock touchpad"), 120, 258);
+            chkWin = AddCheck(p, L.T("锁 Win 键", "Lock Win key"), 228, 258);
+            chkFn.CheckedChanged += delegate { if (!updatingUI) SetKey(Mi.KEY_FN, chkFn.Checked, L.T("Fn 锁", "Fn lock")); };
+            chkTouchpad.CheckedChanged += delegate { if (!updatingUI) SetKey(Mi.KEY_TOUCHPAD, chkTouchpad.Checked, L.T("触控板锁", "Touchpad lock")); };
+            chkWin.CheckedChanged += delegate { if (!updatingUI) SetKey(Mi.KEY_WIN, chkWin.Checked, L.T("Win 键锁", "Win key lock")); };
 
-            AddLabel(p, "CPU 睿频", 16, 292, 200, 22, fHead, null);
-            chkTurboOff = AddCheck(p, "关闭睿频（更凉、更安静、更省电，峰值性能下降）", 16, 314);
+            AddLabel(p, L.T("CPU 睿频", "CPU turbo boost"), 16, 292, 200, 22, fHead, null);
+            chkTurboOff = AddCheck(p, L.T("关闭睿频（更凉、更安静、更省电，峰值性能下降）", "Disable turbo (cooler, quieter, less peak speed)"), 16, 314);
             chkTurboOff.CheckedChanged += delegate { if (!updatingUI) SetTurbo(!chkTurboOff.Checked, true); };
 
-            AddLabel(p, "自动切换", 16, 348, 80, 22, fHead, null);
-            lblAuto = AddLabel(p, "未启用", 96, 348, 230, 22, null, "gray");
-            lblHz = AddLabel(p, "屏幕 --Hz", 16, 372, 310, 22, null, "gray");
+            AddLabel(p, L.T("自动切换", "Automation"), 16, 348, 80, 22, fHead, null);
+            lblAuto = AddLabel(p, L.T("未启用", "Off"), 96, 348, 230, 22, null, "gray");
+            lblHz = AddLabel(p, L.T("屏幕 --Hz", "Display --Hz"), 16, 372, 310, 22, null, "gray");
         }
 
         void BuildMonitor(Panel p)
@@ -270,72 +270,74 @@ namespace RedmiHelper
             graph.Data = history;
             p.Controls.Add(graph);
 
-            chkCsv = AddCheck(p, "持续记录到 CSV（logs 文件夹）", 16, 166);
-            Button exp = AddButton(p, "导出曲线…", 228, 164, 100, 26, -1);
+            chkCsv = AddCheck(p, L.T("持续记录到 CSV（logs 文件夹）", "Log to CSV (logs folder)"), 16, 166);
+            Button exp = AddButton(p, L.T("导出曲线…", "Export..."), 228, 164, 100, 26, -1);
             exp.Click += delegate { ExportCsv(); };
 
-            AddLabel(p, "独显", 16, 198, 60, 22, fHead, null);
-            AddLabel(p, "（只在打开这一页时读取，避免唤醒独显）", 60, 198, 268, 22, null, "gray");
-            lblNv = AddLabel(p, "读取中……", 16, 220, 312, 58, null, null);
-            AddLabel(p, "正在使用独显的程序", 16, 282, 200, 22, fHead, null);
+            AddLabel(p, L.T("独显", "dGPU"), 16, 198, 60, 22, fHead, null);
+            AddLabel(p, L.T("（只在打开这一页时读取，避免唤醒独显）", "(read only on this page to avoid waking it)"), 60, 198, 268, 22, null, "gray");
+            lblNv = AddLabel(p, L.T("读取中……", "Loading..."), 16, 220, 312, 58, null, null);
+            AddLabel(p, L.T("正在使用独显的程序", "Apps using the dGPU"), 16, 282, 200, 22, fHead, null);
             lblNvApps = AddLabel(p, "--", 16, 304, 312, 40, null, null);
 
-            AddLabel(p, "电池健康", 16, 350, 200, 22, fHead, null);
+            AddLabel(p, L.T("电池健康", "Battery health"), 16, 350, 200, 22, fHead, null);
             lblHealth = AddLabel(p, "--", 16, 372, 312, 42, null, null);
         }
 
         void BuildAuto(Panel p)
         {
-            AddLabel(p, "智能模式", 16, 0, 200, 22, fHead, null);
-            chkSmart = AddCheck(p, "根据 CPU 负载和温度自动切换", 16, 22);
-            AddLabel(p, "平时", 16, 52, 40, 22, null, null);
+            AddLabel(p, L.T("智能模式", "Smart mode"), 16, 0, 200, 22, fHead, null);
+            chkSmart = AddCheck(p, L.T("根据 CPU 负载和温度自动切换", "Switch by CPU load and temperature"), 16, 22);
+            AddLabel(p, L.T("平时", "Normal"), 16, 52, 40, 22, null, null);
             cmbLow = AddCombo(p, ModeNames, 56, 49, 76);
-            AddLabel(p, "高负载时", 150, 52, 70, 22, null, null);
+            AddLabel(p, L.T("高负载时", "Heavy load"), 150, 52, 70, 22, null, null);
             cmbHigh = AddCombo(p, ModeNames, 222, 49, 76);
 
-            AddLabel(p, "定时规则", 16, 88, 200, 22, fHead, null);
-            chkSched = AddCheck(p, "每天", 16, 112);
+            AddLabel(p, L.T("定时规则", "Schedule"), 16, 88, 200, 22, fHead, null);
+            chkSched = AddCheck(p, L.T("每天", "Daily"), 16, 112);
             nSh = AddNum(p, 74, 110, 23);
             AddLabel(p, ":", 122, 113, 10, 22, null, null);
             nSm = AddNum(p, 132, 110, 59);
-            AddLabel(p, "到", 184, 113, 20, 22, null, null);
+            AddLabel(p, L.T("到", "to"), 184, 113, 20, 22, null, null);
             nEh = AddNum(p, 206, 110, 23);
             AddLabel(p, ":", 254, 113, 10, 22, null, null);
             nEm = AddNum(p, 264, 110, 59);
-            AddLabel(p, "切换到", 16, 146, 50, 22, null, null);
+            AddLabel(p, L.T("切换到", "Use mode"), 16, 146, 50, 22, null, null);
             cmbSched = AddCombo(p, ModeNames, 70, 143, 90);
 
-            AddLabel(p, "游戏", 16, 180, 200, 22, fHead, null);
-            Button bg = AddButton(p, "游戏列表…", 12, 202, 120, 30, -1);
+            AddLabel(p, L.T("游戏", "Games"), 16, 180, 200, 22, fHead, null);
+            Button bg = AddButton(p, L.T("游戏列表…", "Game list..."), 12, 202, 120, 30, -1);
             bg.Click += delegate { OpenGames(); };
             lblGames = AddLabel(p, "", 140, 208, 190, 22, null, "gray");
 
-            AddLabel(p, "电源", 16, 242, 200, 22, fHead, null);
-            chkBattery = AddCheck(p, "拔掉电源时切到静谧，插回恢复原模式", 16, 264);
-            chkLink = AddCheck(p, "Windows 电源模式跟随性能模式", 16, 288);
-            chkHz = AddCheck(p, "插电用最高刷新率，用电池切到 60Hz", 16, 312);
-            chkTurboAuto = AddCheck(p, "静谧模式或用电池时关闭睿频，其他时候开启", 16, 336);
+            AddLabel(p, L.T("电源", "Power"), 16, 242, 200, 22, fHead, null);
+            chkBattery = AddCheck(p, L.T("拔掉电源时切到静谧，插回恢复原模式", "On battery: Silent, restore when plugged in"), 16, 264);
+            chkLink = AddCheck(p, L.T("Windows 电源模式跟随性能模式", "Windows power mode follows performance mode"), 16, 288);
+            chkHz = AddCheck(p, L.T("插电用最高刷新率，用电池切到 60Hz", "Max refresh rate plugged in, 60Hz on battery"), 16, 312);
+            chkTurboAuto = AddCheck(p, L.T("静谧模式或用电池时关闭睿频，其他时候开启", "Turbo off in Silent mode or on battery"), 16, 336);
 
-            AddLabel(p, "优先级：游戏 > 定时 > 智能。你手动切换模式后，自动切换会暂停，直到情况变化（比如游戏关掉、到了定时时间）。",
+            AddLabel(p, L.T("优先级：游戏 > 定时 > 智能。你手动切换模式后，自动切换会暂停，直到情况变化（比如游戏关掉、到了定时时间）。", "Priority: games > schedule > smart. After you switch modes manually, automation pauses until something changes (a game closes, the schedule starts or ends)."),
                 16, 364, 312, 52, null, "gray");
         }
 
         void BuildSettings(Panel p)
         {
-            AddLabel(p, "外观", 16, 0, 200, 22, fHead, null);
-            AddLabel(p, "主题", 16, 26, 40, 22, null, null);
-            cmbTheme = AddCombo(p, new string[] { "跟随系统", "浅色", "深色" }, 60, 23, 110);
+            AddLabel(p, L.T("外观", "Appearance"), 16, 0, 200, 22, fHead, null);
+            AddLabel(p, L.T("主题", "Theme"), 16, 26, 46, 22, null, null);
+            cmbTheme = AddCombo(p, new string[] { L.T("跟随系统", "System"), L.T("浅色", "Light"), L.T("深色", "Dark") }, 64, 23, 100);
+            AddLabel(p, L.T("语言", "Language"), 180, 26, 66, 22, null, null);
+            cmbLang = AddCombo(p, new string[] { L.T("跟随系统", "System"), "中文", "English" }, 248, 23, 80);
 
-            AddLabel(p, "启动", 16, 62, 200, 22, fHead, null);
-            chkAuto = AddCheck(p, "开机自动启动（后台托盘运行）", 16, 84);
+            AddLabel(p, L.T("启动", "Startup"), 16, 62, 200, 22, fHead, null);
+            chkAuto = AddCheck(p, L.T("开机自动启动（后台托盘运行）", "Start with Windows (in tray)"), 16, 84);
 
-            AddLabel(p, "键盘", 16, 118, 200, 22, fHead, null);
-            Button bl = AddButton(p, "设置控制中心键", 12, 140, 140, 30, -1);
-            bl.Click += delegate { learningKey = true; lblStatus.Text = "请按一下键盘上的「控制中心」键……"; };
+            AddLabel(p, L.T("键盘", "Keyboard"), 16, 118, 200, 22, fHead, null);
+            Button bl = AddButton(p, L.T("设置控制中心键", "Set Control Center key"), 12, 140, 140, 30, -1);
+            bl.Click += delegate { learningKey = true; lblStatus.Text = L.T("请按一下键盘上的「控制中心」键……", "Press the Control Center key on your keyboard..."); };
             lblCtrlKey = AddLabel(p, "", 160, 146, 170, 22, null, "gray");
 
-            AddLabel(p, "数据", 16, 182, 200, 22, fHead, null);
-            Button bo = AddButton(p, "打开日志文件夹", 12, 204, 140, 30, -1);
+            AddLabel(p, L.T("数据", "Data"), 16, 182, 200, 22, fHead, null);
+            Button bo = AddButton(p, L.T("打开日志文件夹", "Open logs folder"), 12, 204, 140, 30, -1);
             bo.Click += delegate
             {
                 string dir = LogDir();
@@ -343,10 +345,10 @@ namespace RedmiHelper
                 Process.Start("explorer.exe", "\"" + dir + "\"");
             };
 
-            AddLabel(p, "关于", 16, 246, 200, 22, fHead, null);
-            AddLabel(p, "Redmi Helper v" + Version + "　适用于 Redmi G Pro 2022（Intel）\n" +
-                        "通过 BIOS 的 WMI 接口控制硬件，命令来自实测和对官方软件的分析。\n" +
-                        "左键托盘图标打开小窗，双击打开完整窗口。",
+            AddLabel(p, L.T("关于", "About"), 16, 246, 200, 22, fHead, null);
+            AddLabel(p, "Redmi Helper v" + Version + L.T("　适用于 Redmi G Pro 2022（Intel）\n", "  for Redmi G Pro 2022 (Intel)\n") +
+                        L.T("通过 BIOS 的 WMI 接口控制硬件，命令来自实测和对官方软件的分析。\n", "Controls hardware through the BIOS WMI interface; commands come from testing and analysis of the official app.\n") +
+                        L.T("左键托盘图标打开小窗，双击打开完整窗口。", "Click the tray icon for the mini panel, double-click for the full window."),
                 16, 268, 312, 70, null, "gray");
         }
 
@@ -362,8 +364,8 @@ namespace RedmiHelper
                 modeItems[i] = it;
             }
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("打开完整窗口", null, delegate { ShowMain(); });
-            menu.Items.Add("退出", null, delegate { ExitApp(); });
+            menu.Items.Add(L.T("打开完整窗口", "Open full window"), null, delegate { ShowMain(); });
+            menu.Items.Add(L.T("退出", "Exit"), null, delegate { ExitApp(); });
 
             tray = new NotifyIcon();
             tray.ContextMenuStrip = menu;
@@ -397,6 +399,7 @@ namespace RedmiHelper
             nEh.Value = Clamp(Settings.GetInt("SchedEH", 7), 0, 23);
             nEm.Value = Clamp(Settings.GetInt("SchedEM", 0), 0, 59);
             cmbTheme.SelectedIndex = Clamp(Settings.GetInt("Theme", 0), 0, 2);
+            cmbLang.SelectedIndex = Clamp(Settings.GetInt("Lang", 0), 0, 2);
             chkAuto.Checked = AutoStart.IsEnabled();
             UpdateGamesLabel();
             UpdateCtrlKeyLabel();
@@ -429,6 +432,12 @@ namespace RedmiHelper
             nEm.ValueChanged += delegate { Settings.SetInt("SchedEM", (int)nEm.Value); };
             cmbTheme.SelectedIndexChanged += delegate { Settings.SetInt("Theme", cmbTheme.SelectedIndex); ApplyTheme(); };
             chkAuto.CheckedChanged += OnAutoChanged;
+            cmbLang.SelectedIndexChanged += delegate
+            {
+                Settings.SetInt("Lang", cmbLang.SelectedIndex);
+                lblStatus.Text = L.T("重启 Redmi Helper 后生效（托盘菜单 → 退出，再重新打开）",
+                                     "Restart Redmi Helper to apply (tray menu → Exit, then reopen)");
+            };
         }
 
         static int Clamp(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
@@ -507,8 +516,8 @@ namespace RedmiHelper
                     gpuTemp = r[14];
                     lblCpu.Text = "CPU  " + cpuTemp + "°C";
                     lblGpu.Text = "GPU  " + gpuTemp + "°C";
-                    lblFanA.Text = "风扇A  " + fanA + " RPM";
-                    lblFanB.Text = "风扇B  " + fanB + " RPM";
+                    lblFanA.Text = L.T("风扇A  ", "Fan A  ") + fanA + " RPM";
+                    lblFanB.Text = L.T("风扇B  ", "Fan B  ") + fanB + " RPM";
                 }
 
                 byte[] m = Mi.Get(Mi.CMD_PERF);
@@ -529,7 +538,7 @@ namespace RedmiHelper
 
                 powerMode = PowerMode.Get();
                 int hz = Display.Current();
-                lblHz.Text = hz > 0 ? "屏幕刷新率 " + hz + "Hz" : "";
+                lblHz.Text = hz > 0 ? L.T("屏幕刷新率 ", "Display ") + hz + "Hz" : "";
 
                 UpdateModeUI();
                 UpdateGpuUI();
@@ -540,7 +549,7 @@ namespace RedmiHelper
             }
             catch (Exception ex)
             {
-                lblStatus.Text = "读取失败：" + ex.Message;
+                lblStatus.Text = L.T("读取失败：", "Read failed: ") + ex.Message;
             }
         }
 
@@ -557,13 +566,13 @@ namespace RedmiHelper
                     double dis = Convert.ToDouble(o["DischargeRate"]) / 1000.0;
                     double chg = Convert.ToDouble(o["ChargeRate"]) / 1000.0;
                     double remain = Convert.ToDouble(o["RemainingCapacity"]) / 1000.0;
-                    string t = "电池 " + pct + "%";
+                    string t = L.T("电池 ", "Battery ") + pct + "%";
                     if (!online && dis > 0.5)
-                        t += "  ·  放电 " + dis.ToString("0.0") + "W  ·  约 " + (remain / dis).ToString("0.0") + " 小时";
+                        t += L.T("  ·  放电 ", "  ·  Draw ") + dis.ToString("0.0") + L.T("W  ·  约 ", "W  ·  ~") + (remain / dis).ToString("0.0") + L.T(" 小时", " h");
                     else if (online && chg > 0.5)
-                        t += "  ·  充电 " + chg.ToString("0.0") + "W";
+                        t += L.T("  ·  充电 ", "  ·  Charging ") + chg.ToString("0.0") + "W";
                     else if (online)
-                        t += "  ·  已接通电源";
+                        t += L.T("  ·  已接通电源", "  ·  Plugged in");
                     lblBat.Text = t;
                     break;
                 }
@@ -618,7 +627,7 @@ namespace RedmiHelper
         {
             using (SaveFileDialog d = new SaveFileDialog())
             {
-                d.Filter = "CSV 文件 (*.csv)|*.csv";
+                d.Filter = L.T("CSV 文件 (*.csv)|*.csv", "CSV files (*.csv)|*.csv");
                 d.FileName = "redmi-helper-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".csv";
                 if (d.ShowDialog(this) != DialogResult.OK) return;
                 try
@@ -628,9 +637,9 @@ namespace RedmiHelper
                         w.WriteLine(CsvHeader);
                         foreach (Sample s in history) w.WriteLine(CsvLine(s));
                     }
-                    lblStatus.Text = "已导出 " + history.Count + " 条数据";
+                    lblStatus.Text = L.T("已导出 ", "Exported ") + history.Count + L.T(" 条数据", " rows");
                 }
-                catch (Exception ex) { lblStatus.Text = "导出失败：" + ex.Message; }
+                catch (Exception ex) { lblStatus.Text = L.T("导出失败：", "Export failed: ") + ex.Message; }
             }
         }
 
@@ -643,7 +652,7 @@ namespace RedmiHelper
             {
                 string a = Nvidia.Status();
                 string b = Nvidia.Apps();
-                if (bootGpuMode == 1) b = "独显直连模式下所有程序都用独显\n" + b;
+                if (bootGpuMode == 1) b = L.T("独显直连模式下所有程序都用独显\n", "In dGPU-only mode every app uses the dGPU\n") + b;
                 try
                 {
                     BeginInvoke(new MethodInvoker(delegate
@@ -670,18 +679,18 @@ namespace RedmiHelper
                 if (ok)
                 {
                     currentMode = idx;
-                    lblStatus.Text = "已切换到「" + ModeNames[idx] + "」";
+                    lblStatus.Text = L.T("已切换到「", "Switched to \"") + ModeNames[idx] + L.T("」", "\"");
                     if (chkLink.Checked) ApplyLinkedPower();
                     if (chkTurboAuto.Checked) ApplyTurboAuto();
                     if (manual && lastAutoKey != "")
                     {
                         manualPaused = true;
-                        lblStatus.Text += "，自动切换暂停到情况变化为止";
+                        lblStatus.Text += L.T("，自动切换暂停到情况变化为止", " (automation paused until something changes)");
                     }
                 }
                 else
                 {
-                    lblStatus.Text = "「" + ModeNames[idx] + "」切换没有生效（极速/狂派可能需要插原装圆口电源）";
+                    lblStatus.Text = L.T("「", "\"") + ModeNames[idx] + L.T("」切换没有生效（极速/狂派可能需要插原装圆口电源）", "\" did not apply (Turbo/Beast may need the original barrel charger)");
                     tray.ShowBalloonTip(3000, "Redmi Helper", lblStatus.Text, ToolTipIcon.Warning);
                 }
                 UpdateModeUI();
@@ -692,7 +701,7 @@ namespace RedmiHelper
             }
             catch (Exception ex)
             {
-                lblStatus.Text = "切换失败：" + ex.Message;
+                lblStatus.Text = L.T("切换失败：", "Switch failed: ") + ex.Message;
                 return false;
             }
         }
@@ -732,14 +741,14 @@ namespace RedmiHelper
             {
                 // 重启前读回的仍是当前实际模式，所以只看写入回应的状态字节
                 byte[] r = Mi.Set(Mi.CMD_GPU, (byte)idx);
-                if (!Mi.Accepted(r)) { lblStatus.Text = "显卡模式切换没有生效"; return; }
+                if (!Mi.Accepted(r)) { lblStatus.Text = L.T("显卡模式切换没有生效", "GPU mode change did not apply"); return; }
                 gpuMode = idx;
                 Settings.SetInt("PendingGpu", idx == bootGpuMode ? -1 : idx);
                 UpdateGpuUI();
-                if (idx == bootGpuMode) { lblStatus.Text = "已撤销显卡模式更改"; return; }
-                lblStatus.Text = "显卡模式已设为「" + GpuNames[idx] + "」，重启后生效";
+                if (idx == bootGpuMode) { lblStatus.Text = L.T("已撤销显卡模式更改", "GPU mode change undone"); return; }
+                lblStatus.Text = L.T("显卡模式已设为「", "GPU mode set to \"") + GpuNames[idx] + L.T("」，重启后生效", "\", applies after restart");
                 DialogResult dr = MessageBox.Show(
-                    "显卡模式已设为「" + GpuNames[idx] + "」，需要重启电脑才会生效。\n\n现在重启吗？（请先保存好打开的文件）",
+                    L.T("显卡模式已设为「", "GPU mode set to \"") + GpuNames[idx] + L.T("」，需要重启电脑才会生效。\n\n现在重启吗？（请先保存好打开的文件）", "\". Restart the computer to apply it.\n\nRestart now? (Save your open files first.)"),
                     "Redmi Helper", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (dr == DialogResult.Yes)
                 {
@@ -749,14 +758,14 @@ namespace RedmiHelper
                     Process.Start(psi);
                 }
             }
-            catch (Exception ex) { lblStatus.Text = "显卡切换失败：" + ex.Message; }
+            catch (Exception ex) { lblStatus.Text = L.T("显卡切换失败：", "GPU switch failed: ") + ex.Message; }
         }
 
         void UpdateGpuUI()
         {
             Highlight(gpuButtons, gpuMode, GpuColor);
             lblGpuNote.Text = (gpuMode >= 0 && bootGpuMode >= 0 && gpuMode != bootGpuMode)
-                ? "已更改，重启后生效（当前实际仍是「" + GpuNames[bootGpuMode] + "」）" : "";
+                ? L.T("已更改，重启后生效（当前实际仍是「", "Changed, applies after restart (currently still \"") + GpuNames[bootGpuMode] + L.T("」）", "\")") : "";
         }
 
         // ================= Windows 电源模式 =================
@@ -766,9 +775,9 @@ namespace RedmiHelper
             if (PowerMode.Set(idx))
             {
                 powerMode = idx;
-                lblStatus.Text = "Windows 电源模式：" + PowerMode.Names[idx];
+                lblStatus.Text = L.T("Windows 电源模式：", "Windows power mode: ") + PowerMode.Names[idx];
             }
-            else lblStatus.Text = "电源模式切换失败（电源计划需要是「平衡」）";
+            else lblStatus.Text = L.T("电源模式切换失败（电源计划需要是「平衡」）", "Power mode change failed (power plan must be \"Balanced\")");
             UpdatePowerUI();
         }
 
@@ -787,7 +796,7 @@ namespace RedmiHelper
         {
             bool ok = Turbo.Set(on);
             if (showStatus || !ok)
-                lblStatus.Text = ok ? (on ? "CPU 睿频已开启" : "CPU 睿频已关闭") : "睿频设置失败";
+                lblStatus.Text = ok ? (on ? L.T("CPU 睿频已开启", "Turbo boost on") : L.T("CPU 睿频已关闭", "Turbo boost off")) : L.T("睿频设置失败", "Turbo setting failed");
             updatingUI = true;
             chkTurboOff.Checked = !on;
             updatingUI = false;
@@ -807,9 +816,9 @@ namespace RedmiHelper
             try
             {
                 Mi.SetKey(sub, on);
-                lblStatus.Text = name + (on ? " 已开启" : " 已关闭");
+                lblStatus.Text = name + (on ? L.T(" 已开启", " on") : L.T(" 已关闭", " off"));
             }
-            catch (Exception ex) { lblStatus.Text = name + " 设置失败：" + ex.Message; }
+            catch (Exception ex) { lblStatus.Text = name + L.T(" 设置失败：", " failed: ") + ex.Message; }
         }
 
         // ================= 自动切换（游戏 > 定时 > 智能） =================
@@ -865,23 +874,23 @@ namespace RedmiHelper
             string game = RunningGame();
             if (onBattery && chkBattery.Checked)
             {
-                key = ""; autoReason = "用电池中（由「拔电切静谧」接管）";
+                key = ""; autoReason = L.T("用电池中（由「拔电切静谧」接管）", "On battery (handled by battery rule)");
             }
             else if (game != null)
             {
                 key = "game:" + game; desired = Clamp(Settings.GetInt("GameMode", 3), 0, 3);
-                autoReason = "游戏 " + game;
+                autoReason = L.T("游戏 ", "Game ") + game;
             }
             else if (chkSched.Checked && InSchedule())
             {
                 key = "sched"; desired = cmbSched.SelectedIndex;
-                autoReason = "定时规则";
+                autoReason = L.T("定时规则", "Schedule");
             }
             else if (chkSmart.Checked)
             {
                 key = smartHigh ? "smart-hi" : "smart-lo";
                 desired = smartHigh ? cmbHigh.SelectedIndex : cmbLow.SelectedIndex;
-                autoReason = smartHigh ? "智能：高负载" : "智能：平时";
+                autoReason = smartHigh ? L.T("智能：高负载", "Smart: heavy load") : L.T("智能：平时", "Smart: normal");
             }
             else autoReason = "";
 
@@ -913,8 +922,8 @@ namespace RedmiHelper
         void UpdateAutoLabel()
         {
             if (lblAuto == null) return;
-            if (autoReason == "") lblAuto.Text = (chkSmart.Checked || chkSched.Checked || GameList().Length > 0) ? "待命中" : "未启用";
-            else if (manualPaused) lblAuto.Text = autoReason + "（已手动暂停）";
+            if (autoReason == "") lblAuto.Text = (chkSmart.Checked || chkSched.Checked || GameList().Length > 0) ? L.T("待命中", "Standing by") : L.T("未启用", "Off");
+            else if (manualPaused) lblAuto.Text = autoReason + L.T("（已手动暂停）", " (paused manually)");
             else lblAuto.Text = autoReason;
         }
 
@@ -928,7 +937,7 @@ namespace RedmiHelper
                     Settings.SetStr("Games", string.Join(";", f.Games));
                     Settings.SetInt("GameMode", f.Mode);
                     UpdateGamesLabel();
-                    lblStatus.Text = "游戏列表已保存";
+                    lblStatus.Text = L.T("游戏列表已保存", "Game list saved");
                 }
             }
         }
@@ -936,7 +945,7 @@ namespace RedmiHelper
         void UpdateGamesLabel()
         {
             int n = GameList().Length;
-            lblGames.Text = n == 0 ? "还没有添加游戏" : "已添加 " + n + " 个，运行时切到「" + ModeNames[Clamp(Settings.GetInt("GameMode", 3), 0, 3)] + "」";
+            lblGames.Text = n == 0 ? L.T("还没有添加游戏", "No games added") : L.T("已添加 ", "") + n + L.T(" 个，运行时切到「", " game(s) → \"") + ModeNames[Clamp(Settings.GetInt("GameMode", 3), 0, 3)] + L.T("」", "\"");
         }
 
         // ================= 插拔电源 =================
@@ -959,7 +968,7 @@ namespace RedmiHelper
                     SetMode(0, false);
                 }
                 if (bootGpuMode == 1)
-                    tray.ShowBalloonTip(6000, "Redmi Helper", "现在是独显直连，用电池会很费电。可以切到「混合模式」后重启。", ToolTipIcon.Info);
+                    tray.ShowBalloonTip(6000, "Redmi Helper", L.T("现在是独显直连，用电池会很费电。可以切到「混合模式」后重启。", "dGPU-only mode drains the battery fast. Switch to Hybrid and restart."), ToolTipIcon.Info);
             }
             else if (chkBattery.Checked)
             {
@@ -986,9 +995,9 @@ namespace RedmiHelper
                 int target = onBattery ? low : max;
                 bool ok = Display.Set(target);
                 if (showStatus || !ok)
-                    lblStatus.Text = ok ? "屏幕刷新率已设为 " + target + "Hz" : "刷新率切换失败";
+                    lblStatus.Text = ok ? L.T("屏幕刷新率已设为 ", "Refresh rate set to ") + target + "Hz" : L.T("刷新率切换失败", "Refresh rate change failed");
             }
-            catch (Exception ex) { lblStatus.Text = "刷新率切换失败：" + ex.Message; }
+            catch (Exception ex) { lblStatus.Text = L.T("刷新率切换失败：", "Refresh rate change failed: ") + ex.Message; }
         }
 
         // ================= 键盘特殊键（HID_EVENT20） =================
@@ -1007,7 +1016,7 @@ namespace RedmiHelper
                 };
                 keyWatcher.Start();
             }
-            catch (Exception ex) { lblStatus.Text = "无法监听特殊键：" + ex.Message; }
+            catch (Exception ex) { lblStatus.Text = L.T("无法监听特殊键：", "Cannot listen for special keys: ") + ex.Message; }
         }
 
         void OnKeyEvent(byte[] d)
@@ -1018,7 +1027,7 @@ namespace RedmiHelper
                 learningKey = false;
                 Settings.SetInt("ControlKey", id);
                 UpdateCtrlKeyLabel();
-                lblStatus.Text = "已设置！以后按这个键会打开 Redmi Helper";
+                lblStatus.Text = L.T("已设置！以后按这个键会打开 Redmi Helper", "Done! This key now opens Redmi Helper");
                 return;
             }
             if (id == Settings.GetInt("ControlKey", -1)) { ToggleWindow(); return; }
@@ -1028,7 +1037,7 @@ namespace RedmiHelper
         void UpdateCtrlKeyLabel()
         {
             int id = Settings.GetInt("ControlKey", -1);
-            lblCtrlKey.Text = id < 0 ? "未设置" : "已设置（事件 " + (id >> 8) + "-" + (id & 0xFF) + "）";
+            lblCtrlKey.Text = id < 0 ? L.T("未设置", "Not set") : L.T("已设置（事件 ", "Set (event ") + (id >> 8) + "-" + (id & 0xFF) + L.T("）", ")");
         }
 
         // ================= 快捷键 =================
@@ -1039,7 +1048,7 @@ namespace RedmiHelper
                 int next = currentMode < 0 ? 1 : (currentMode + 1) % 4;
                 bool ok = SetMode(next, true);
                 if (!ok && next >= 2) { next = 0; ok = SetMode(0, true); }
-                if (ok) tray.ShowBalloonTip(1500, "Redmi Helper", "性能模式：" + ModeNames[next], ToolTipIcon.None);
+                if (ok) tray.ShowBalloonTip(1500, "Redmi Helper", L.T("性能模式：", "Mode: ") + ModeNames[next], ToolTipIcon.None);
             }
             base.WndProc(ref m);
         }
@@ -1070,14 +1079,14 @@ namespace RedmiHelper
                 if (iconHandle != IntPtr.Zero) DestroyIcon(iconHandle);
                 iconHandle = h;
             }
-            string modeName = currentMode >= 0 ? ModeNames[currentMode] : "未知";
+            string modeName = currentMode >= 0 ? ModeNames[currentMode] : L.T("未知", "Unknown");
             tray.Text = "Redmi Helper - " + modeName + " | CPU " + cpuTemp + "°C";
         }
 
         void UpdatePopup()
         {
             string info = (gpuMode >= 0 ? GpuNames[gpuMode] : "--") + "  ·  " +
-                          (powerMode >= 0 ? PowerMode.Names[powerMode] : "--") + "  ·  " + lblHz.Text.Replace("屏幕刷新率 ", "");
+                          (powerMode >= 0 ? PowerMode.Names[powerMode] : "--") + "  ·  " + lblHz.Text.Replace(L.T("屏幕刷新率 ", "Display "), "");
             popup.UpdateView("CPU " + cpuTemp + "°C   GPU " + gpuTemp + "°C   " + fanA + " RPM", info, currentMode);
         }
 
@@ -1087,13 +1096,13 @@ namespace RedmiHelper
             if (chkAuto.Checked)
             {
                 bool ok = AutoStart.Enable();
-                lblStatus.Text = ok ? "已设置开机自启" : "设置开机自启失败";
+                lblStatus.Text = ok ? L.T("已设置开机自启", "Start with Windows enabled") : L.T("设置开机自启失败", "Could not enable start with Windows");
                 if (!ok) { chkAuto.CheckedChanged -= OnAutoChanged; chkAuto.Checked = false; chkAuto.CheckedChanged += OnAutoChanged; }
             }
             else
             {
                 AutoStart.Disable();
-                lblStatus.Text = "已取消开机自启";
+                lblStatus.Text = L.T("已取消开机自启", "Start with Windows disabled");
             }
         }
 
