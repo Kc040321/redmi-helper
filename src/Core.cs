@@ -247,35 +247,82 @@ namespace RedmiHelper
         }
     }
 
-    // ===== Windows 电源模式（最佳能效 / 平衡 / 最佳性能） =====
-    static class PowerMode
+    // ===== 电源计划（控制面板 → 电源选项：节能 / 平衡 / 高性能） =====
+    static class PowerPlan
     {
-        [DllImport("powrprof.dll")] static extern uint PowerSetActiveOverlayScheme(ref Guid overlay);
-        [DllImport("powrprof.dll")] static extern uint PowerGetEffectiveOverlayScheme(out Guid overlay);
+        [DllImport("powrprof.dll")] static extern uint PowerGetActiveScheme(IntPtr root, out IntPtr scheme);
+        [DllImport("powrprof.dll")] static extern uint PowerSetActiveScheme(IntPtr root, ref Guid scheme);
+        [DllImport("powrprof.dll")] static extern uint PowerEnumerate(IntPtr root, IntPtr scheme, IntPtr sub, uint flags, uint index, IntPtr buffer, ref uint size);
+        [DllImport("kernel32.dll")] static extern IntPtr LocalFree(IntPtr h);
+        const uint ACCESS_SCHEME = 16;
 
-        public static readonly string[] Names = { L.T("最佳能效", "Efficiency"), L.T("平衡", "Balanced"), L.T("最佳性能", "Performance") };
+        public static readonly string[] Names = { L.T("节能", "Power saver"), L.T("平衡", "Balanced"), L.T("高性能", "High perf.") };
+        // Windows 自带的三个电源计划，GUID 在所有电脑上都一样
         static readonly Guid[] Guids = {
-            new Guid("961cc777-2547-4f9d-8174-7d86181b8a7a"),
-            Guid.Empty,
-            new Guid("ded574b5-45a0-4f42-8737-46345c09c238")
+            new Guid("a1841308-3541-4fab-bc81-f71556f20b4a"),
+            new Guid("381b4222-f694-41f0-9685-ff5bb260df2e"),
+            new Guid("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c")
         };
 
+        // 返回 0 节能 / 1 平衡 / 2 高性能，-1 = 用的是别的自定义计划
         public static int Get()
         {
             try
             {
-                Guid g;
-                if (PowerGetEffectiveOverlayScheme(out g) != 0) return -1;
+                IntPtr p;
+                if (PowerGetActiveScheme(IntPtr.Zero, out p) != 0) return -1;
+                Guid g = (Guid)Marshal.PtrToStructure(p, typeof(Guid));
+                LocalFree(p);
                 for (int i = 0; i < 3; i++) if (g == Guids[i]) return i;
-                return 1;
+                return -1;
             }
             catch { return -1; }
         }
 
-        public static bool Set(int idx)
+        static bool Exists(Guid target)
         {
-            try { Guid g = Guids[idx]; return PowerSetActiveOverlayScheme(ref g) == 0; }
+            IntPtr buf = Marshal.AllocHGlobal(16);
+            try
+            {
+                for (uint i = 0; ; i++)
+                {
+                    uint size = 16;
+                    if (PowerEnumerate(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, ACCESS_SCHEME, i, buf, ref size) != 0) return false;
+                    if ((Guid)Marshal.PtrToStructure(buf, typeof(Guid)) == target) return true;
+                }
+            }
+            finally { Marshal.FreeHGlobal(buf); }
+        }
+
+        // 很多新笔记本把「节能」「高性能」隐藏/删掉了，用 powercfg 按原来的 GUID 恢复
+        static bool Restore(Guid g)
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo("powercfg.exe", "-duplicatescheme " + g + " " + g);
+                psi.UseShellExecute = false;
+                psi.CreateNoWindow = true;
+                using (Process p = Process.Start(psi)) { p.WaitForExit(5000); }
+                return Exists(g);
+            }
             catch { return false; }
+        }
+
+        // 返回 0 = 成功，1 = 成功（顺便恢复了被隐藏的计划），-1 = 失败
+        public static int Set(int idx)
+        {
+            try
+            {
+                Guid g = Guids[idx];
+                int result = 0;
+                if (!Exists(g))
+                {
+                    if (!Restore(g)) return -1;
+                    result = 1;
+                }
+                return PowerSetActiveScheme(IntPtr.Zero, ref g) == 0 ? result : -1;
+            }
+            catch { return -1; }
         }
     }
 

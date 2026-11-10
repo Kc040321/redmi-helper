@@ -18,7 +18,7 @@ namespace RedmiHelper
 {
     class MainForm : Form
     {
-        public const string Version = "1.2";
+        public const string Version = "1.3";
 
         public static readonly string[] ModeNames = { L.T("静谧", "Silent"), L.T("均衡", "Balanced"), L.T("极速", "Turbo"), L.T("狂派", "Beast") };
         static readonly byte[] ModeValues = { 2, 1, 3, 4 };
@@ -237,10 +237,10 @@ namespace RedmiHelper
             }
             lblGpuNote = AddLabel(p, "", 16, 136, 310, 22, null, "red");
 
-            AddLabel(p, L.T("Windows 电源模式", "Windows power mode"), 16, 162, 200, 22, fHead, null);
+            AddLabel(p, L.T("电源计划", "Power plan"), 16, 162, 200, 22, fHead, null);
             for (int i = 0; i < 3; i++)
             {
-                Button b = AddButton(p, PowerMode.Names[i], 12 + i * 107, 186, 102, 36, i);
+                Button b = AddButton(p, PowerPlan.Names[i], 12 + i * 107, 186, 102, 36, i);
                 b.Click += OnPowerButton;
                 powerButtons[i] = b;
             }
@@ -312,7 +312,7 @@ namespace RedmiHelper
 
             AddLabel(p, L.T("电源", "Power"), 16, 242, 200, 22, fHead, null);
             chkBattery = AddCheck(p, L.T("拔掉电源时切到静谧，插回恢复原模式", "On battery: Silent, restore when plugged in"), 16, 264);
-            chkLink = AddCheck(p, L.T("Windows 电源模式跟随性能模式", "Windows power mode follows performance mode"), 16, 288);
+            chkLink = AddCheck(p, L.T("电源计划跟随性能模式", "Power plan follows performance mode"), 16, 288);
             chkHz = AddCheck(p, L.T("插电用最高刷新率，用电池切到 60Hz", "Max refresh rate plugged in, 60Hz on battery"), 16, 312);
             chkTurboAuto = AddCheck(p, L.T("静谧模式或用电池时关闭睿频，其他时候开启", "Turbo off in Silent mode or on battery"), 16, 336);
 
@@ -536,7 +536,7 @@ namespace RedmiHelper
                 int tb = Turbo.Get();
                 if (tb >= 0) { updatingUI = true; chkTurboOff.Checked = tb == 0; updatingUI = false; }
 
-                powerMode = PowerMode.Get();
+                powerMode = PowerPlan.Get();
                 int hz = Display.Current();
                 lblHz.Text = hz > 0 ? L.T("屏幕刷新率 ", "Display ") + hz + "Hz" : "";
 
@@ -768,24 +768,32 @@ namespace RedmiHelper
                 ? L.T("已更改，重启后生效（当前实际仍是「", "Changed, applies after restart (currently still \"") + GpuNames[bootGpuMode] + L.T("」）", "\")") : "";
         }
 
-        // ================= Windows 电源模式 =================
+        // ================= 电源计划 =================
         void OnPowerButton(object sender, EventArgs e)
         {
-            int idx = (int)((Button)sender).Tag;
-            if (PowerMode.Set(idx))
+            SetPlan((int)((Button)sender).Tag, true);
+        }
+
+        void SetPlan(int idx, bool showStatus)
+        {
+            int r = PowerPlan.Set(idx);
+            if (r >= 0)
             {
                 powerMode = idx;
-                lblStatus.Text = L.T("Windows 电源模式：", "Windows power mode: ") + PowerMode.Names[idx];
+                if (showStatus)
+                    lblStatus.Text = L.T("电源计划：", "Power plan: ") + PowerPlan.Names[idx] +
+                        (r == 1 ? L.T("（系统里原本隐藏了这个计划，已自动恢复）", " (it was hidden by Windows and has been restored)") : "");
+                if (chkTurboAuto.Checked) ApplyTurboAuto();   // 每个计划的睿频设置是分开的
             }
-            else lblStatus.Text = L.T("电源模式切换失败（电源计划需要是「平衡」）", "Power mode change failed (power plan must be \"Balanced\")");
+            else lblStatus.Text = L.T("电源计划切换失败", "Power plan change failed");
             UpdatePowerUI();
         }
 
-        // 静谧 -> 最佳能效，均衡 -> 平衡，极速/狂派 -> 最佳性能
+        // 静谧 -> 节能，均衡 -> 平衡，极速/狂派 -> 高性能
         void ApplyLinkedPower()
         {
             int target = currentMode == 0 ? 0 : (currentMode == 1 ? 1 : 2);
-            if (PowerMode.Set(target)) powerMode = target;
+            if (target != powerMode) SetPlan(target, false);
             UpdatePowerUI();
         }
 
@@ -1086,7 +1094,7 @@ namespace RedmiHelper
         void UpdatePopup()
         {
             string info = (gpuMode >= 0 ? GpuNames[gpuMode] : "--") + "  ·  " +
-                          (powerMode >= 0 ? PowerMode.Names[powerMode] : "--") + "  ·  " + lblHz.Text.Replace(L.T("屏幕刷新率 ", "Display "), "");
+                          (powerMode >= 0 ? PowerPlan.Names[powerMode] : "--") + "  ·  " + lblHz.Text.Replace(L.T("屏幕刷新率 ", "Display "), "");
             popup.UpdateView("CPU " + cpuTemp + "°C   GPU " + gpuTemp + "°C   " + fanA + " RPM", info, currentMode);
         }
 

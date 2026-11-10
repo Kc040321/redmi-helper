@@ -19,7 +19,7 @@ The UI is available in Chinese and English (Settings → Language, or follows th
 **Home**
 - Four performance modes: Silent / Balanced / Turbo / Beast (`Ctrl+Alt+M` cycles through them)
 - GPU mode: Hybrid / dGPU only (MUX switch, applies after restart; pending changes are remembered)
-- Windows power mode: Efficiency / Balanced / Performance
+- Power plan (Control Panel → Power Options): Power saver / Balanced / High performance; plans hidden by Windows are restored automatically
 - Fn lock, touchpad lock, Win key lock
 - CPU turbo boost on/off (uses a built-in Windows power setting, no driver needed; 12th-gen H-series CPUs cannot be undervolted, so this is the alternative)
 - Live CPU / GPU temperature, both fan speeds, battery draw and estimated runtime
@@ -34,7 +34,7 @@ The UI is available in Chinese and English (Settings → Language, or follows th
 - Smart mode: switches between two modes based on CPU load and temperature
 - Schedule: e.g. Silent every day from 23:00 to 7:00 (wraps past midnight)
 - Game list: switch to a chosen mode while a game runs, restore afterwards
-- Silent on battery, Windows power mode follows performance mode, max refresh rate plugged in / 60Hz on battery, turbo off in Silent mode or on battery
+- Silent on battery, power plan follows performance mode, max refresh rate plugged in / 60Hz on battery, turbo off in Silent mode or on battery
 - Priority: games > schedule > smart. A manual switch pauses automation until something changes
 
 **Other**
