@@ -47,6 +47,14 @@ The UI is available in Chinese and English (Settings → Language, or follows th
 
 Get the latest `RedmiHelper.exe` from [Releases](../../releases). It is not code-signed, so Windows SmartScreen may warn you: click "More info → Run anyway". It needs administrator rights.
 
+## Optional: tune the power plans
+
+`tools/tune-power-plans.ps1` gives Power saver / Balanced / High performance / Ultimate distinct roles (processor, PCIe, USB, Wi-Fi, display and sleep timeouts), backing them up to the desktop first. Run it from an admin PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\tune-power-plans.ps1
+```
+
 ## Build
 
 No Visual Studio or .NET SDK needed. It compiles with the C# compiler that ships with Windows:

@@ -47,6 +47,14 @@
 
 在 [Releases](../../releases) 下载最新的 `RedmiHelper.exe`。程序没有数字签名，Windows 可能弹出 SmartScreen 警告，点「更多信息 → 仍要运行」即可。需要管理员权限。
 
+## 电源计划一键优化（可选）
+
+`tools/tune-power-plans.ps1` 会把节能 / 平衡 / 高性能 / 卓越性能四个计划调成各有分工的设置（处理器、PCIe、USB、WiFi、息屏和睡眠时间），改之前会先备份到桌面。用管理员 PowerShell 运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\tune-power-plans.ps1
+```
+
 ## 编译
 
 不需要安装 Visual Studio 或 .NET SDK，用 Windows 自带的 C# 编译器即可：
