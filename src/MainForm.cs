@@ -18,7 +18,7 @@ namespace RedmiHelper
 {
     class MainForm : Form
     {
-        public const string Version = "1.3";
+        public const string Version = "1.3.1";
 
         public static readonly string[] ModeNames = { L.T("静谧", "Silent"), L.T("均衡", "Balanced"), L.T("极速", "Turbo"), L.T("狂派", "Beast") };
         static readonly byte[] ModeValues = { 2, 1, 3, 4 };
@@ -49,7 +49,11 @@ namespace RedmiHelper
         int page = 0;
         Button[] modeButtons = new Button[4];
         Button[] gpuButtons = new Button[2];
-        Button[] powerButtons = new Button[3];
+        Panel planRow;
+        List<Button> planButtons = new List<Button>();
+        List<PlanInfo> plans = new List<PlanInfo>();
+        string planKey = "";
+        Guid activePlan = Guid.Empty;
         ToolStripMenuItem[] modeItems = new ToolStripMenuItem[4];
         CheckBox chkFn, chkTouchpad, chkWin, chkBattery, chkHz, chkLink, chkAuto, chkSmart, chkSched, chkCsv, chkTurboOff, chkTurboAuto;
         ComboBox cmbLow, cmbHigh, cmbSched, cmbTheme, cmbLang;
@@ -66,7 +70,6 @@ namespace RedmiHelper
         int currentMode = -1;   // ModeNames 的下标，-1 = 未知
         int gpuMode = -1;       // 0 混合 1 独显直连（设置值，可能还没重启生效）
         int bootGpuMode = -1;   // 当前实际生效的显卡模式
-        int powerMode = -1;
         int cpuTemp = 0, gpuTemp = 0, fanA = 0, fanB = 0;
         double cpuLoad = 0;
         List<double> loadHist = new List<double>();
@@ -238,12 +241,10 @@ namespace RedmiHelper
             lblGpuNote = AddLabel(p, "", 16, 136, 310, 22, null, "red");
 
             AddLabel(p, L.T("电源计划", "Power plan"), 16, 162, 200, 22, fHead, null);
-            for (int i = 0; i < 3; i++)
-            {
-                Button b = AddButton(p, PowerPlan.Names[i], 12 + i * 107, 186, 102, 36, i);
-                b.Click += OnPowerButton;
-                powerButtons[i] = b;
-            }
+            planRow = new Panel();
+            planRow.Location = P(12, 186);
+            planRow.Size = Z(318, 36);
+            p.Controls.Add(planRow);
 
             AddLabel(p, L.T("按键", "Keys"), 16, 234, 200, 22, fHead, null);
             chkFn = AddCheck(p, L.T("Fn 锁", "Fn lock"), 16, 258);
@@ -536,7 +537,7 @@ namespace RedmiHelper
                 int tb = Turbo.Get();
                 if (tb >= 0) { updatingUI = true; chkTurboOff.Checked = tb == 0; updatingUI = false; }
 
-                powerMode = PowerPlan.Get();
+                RefreshPlans();
                 int hz = Display.Current();
                 lblHz.Text = hz > 0 ? L.T("屏幕刷新率 ", "Display ") + hz + "Hz" : "";
 
@@ -769,35 +770,86 @@ namespace RedmiHelper
         }
 
         // ================= 电源计划 =================
-        void OnPowerButton(object sender, EventArgs e)
+        // 读取电脑上实际有哪些计划；计划列表变了就重建按钮
+        void RefreshPlans()
         {
-            SetPlan((int)((Button)sender).Tag, true);
+            List<PlanInfo> list = PowerPlan.List();
+            bool hasSaver = false;
+            string key = "";
+            foreach (PlanInfo pl in list) { key += pl.Id + pl.Name + ";"; if (pl.Rank == 0) hasSaver = true; }
+            activePlan = PowerPlan.Active();
+            if (key != planKey)
+            {
+                planKey = key;
+                plans = list;
+                planRow.SuspendLayout();
+                planRow.Controls.Clear();
+                planButtons.Clear();
+                int n = Math.Min(plans.Count, hasSaver ? 4 : 3);
+                int slots = n + (hasSaver ? 0 : 1);
+                int gap = 5;
+                int w = (318 - gap * (slots - 1)) / Math.Max(1, slots);
+                for (int i = 0; i < n; i++)
+                {
+                    Button b = AddButton(planRow, plans[i].Name, i * (w + gap), 0, w, 36, i);
+                    b.Click += OnPlanButton;
+                    planButtons.Add(b);
+                }
+                if (!hasSaver)
+                {
+                    Button add = AddButton(planRow, L.T("+ 节能", "+ Saver"), n * (w + gap), 0, w, 36, -1);
+                    add.Click += delegate
+                    {
+                        lblStatus.Text = PowerPlan.CreateSaver()
+                            ? L.T("已创建「节能」计划", "Power saver plan created")
+                            : L.T("创建「节能」计划失败", "Could not create a power saver plan");
+                        RefreshPlans();
+                    };
+                }
+                planRow.ResumeLayout();
+                Theme.Apply(planRow);
+            }
+            UpdatePowerUI();
         }
 
-        void SetPlan(int idx, bool showStatus)
+        void OnPlanButton(object sender, EventArgs e)
         {
-            int r = PowerPlan.Set(idx);
-            if (r >= 0)
+            int i = (int)((Button)sender).Tag;
+            if (i >= 0 && i < plans.Count) SetPlan(plans[i], true);
+        }
+
+        void SetPlan(PlanInfo plan, bool showStatus)
+        {
+            if (PowerPlan.Activate(plan.Id))
             {
-                powerMode = idx;
-                if (showStatus)
-                    lblStatus.Text = L.T("电源计划：", "Power plan: ") + PowerPlan.Names[idx] +
-                        (r == 1 ? L.T("（系统里原本隐藏了这个计划，已自动恢复）", " (it was hidden by Windows and has been restored)") : "");
+                activePlan = plan.Id;
+                if (showStatus) lblStatus.Text = L.T("电源计划：", "Power plan: ") + plan.Name;
                 if (chkTurboAuto.Checked) ApplyTurboAuto();   // 每个计划的睿频设置是分开的
             }
             else lblStatus.Text = L.T("电源计划切换失败", "Power plan change failed");
             UpdatePowerUI();
         }
 
-        // 静谧 -> 节能，均衡 -> 平衡，极速/狂派 -> 高性能
+        // 静谧 -> 节能，均衡 -> 平衡，极速 -> 高性能，狂派 -> 卓越性能（没有就找最接近的）
         void ApplyLinkedPower()
         {
-            int target = currentMode == 0 ? 0 : (currentMode == 1 ? 1 : 2);
-            if (target != powerMode) SetPlan(target, false);
+            PlanInfo target = PowerPlan.ForMode(plans, currentMode);
+            if (target != null && target.Id != activePlan) SetPlan(target, false);
             UpdatePowerUI();
         }
 
-        void UpdatePowerUI() { Highlight(powerButtons, powerMode, PowerColor); }
+        string ActivePlanName()
+        {
+            foreach (PlanInfo pl in plans) if (pl.Id == activePlan) return pl.Name;
+            return "--";
+        }
+
+        void UpdatePowerUI()
+        {
+            int sel = -1;
+            for (int i = 0; i < planButtons.Count; i++) if (plans[i].Id == activePlan) sel = i;
+            Highlight(planButtons.ToArray(), sel, PowerColor);
+        }
 
         // ================= CPU 睿频 =================
         void SetTurbo(bool on, bool showStatus)
@@ -1094,7 +1146,7 @@ namespace RedmiHelper
         void UpdatePopup()
         {
             string info = (gpuMode >= 0 ? GpuNames[gpuMode] : "--") + "  ·  " +
-                          (powerMode >= 0 ? PowerPlan.Names[powerMode] : "--") + "  ·  " + lblHz.Text.Replace(L.T("屏幕刷新率 ", "Display "), "");
+                          ActivePlanName() + "  ·  " + lblHz.Text.Replace(L.T("屏幕刷新率 ", "Display "), "");
             popup.UpdateView("CPU " + cpuTemp + "°C   GPU " + gpuTemp + "°C   " + fanA + " RPM", info, currentMode);
         }
 

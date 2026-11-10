@@ -19,7 +19,7 @@ The UI is available in Chinese and English (Settings → Language, or follows th
 **Home**
 - Four performance modes: Silent / Balanced / Turbo / Beast (`Ctrl+Alt+M` cycles through them)
 - GPU mode: Hybrid / dGPU only (MUX switch, applies after restart; pending changes are remembered)
-- Power plan (Control Panel → Power Options): Power saver / Balanced / High performance; plans hidden by Windows are restored automatically
+- Power plan (Control Panel → Power Options): shows the plans that actually exist on your PC, with a one-click Power saver if it is missing; can follow the performance mode (Silent → Power saver, Balanced → Balanced, Turbo → High performance, Beast → Ultimate, falling back to the closest)
 - Fn lock, touchpad lock, Win key lock
 - CPU turbo boost on/off (uses a built-in Windows power setting, no driver needed; 12th-gen H-series CPUs cannot be undervolted, so this is the alternative)
 - Live CPU / GPU temperature, both fan speeds, battery draw and estimated runtime

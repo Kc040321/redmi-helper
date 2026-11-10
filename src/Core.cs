@@ -247,82 +247,133 @@ namespace RedmiHelper
         }
     }
 
-    // ===== 电源计划（控制面板 → 电源选项：节能 / 平衡 / 高性能） =====
+    // ===== 电源计划（控制面板 → 电源选项），按电脑上实际存在的计划列出 =====
+    class PlanInfo
+    {
+        public Guid Id;
+        public string Name;
+        public int Rank;   // 0 节能 1 平衡 2 高性能 3 卓越性能，-1 = 看不出来
+    }
+
     static class PowerPlan
     {
         [DllImport("powrprof.dll")] static extern uint PowerGetActiveScheme(IntPtr root, out IntPtr scheme);
         [DllImport("powrprof.dll")] static extern uint PowerSetActiveScheme(IntPtr root, ref Guid scheme);
         [DllImport("powrprof.dll")] static extern uint PowerEnumerate(IntPtr root, IntPtr scheme, IntPtr sub, uint flags, uint index, IntPtr buffer, ref uint size);
+        [DllImport("powrprof.dll")] static extern uint PowerReadFriendlyName(IntPtr root, ref Guid scheme, IntPtr sub, IntPtr setting, IntPtr buffer, ref uint size);
         [DllImport("kernel32.dll")] static extern IntPtr LocalFree(IntPtr h);
         const uint ACCESS_SCHEME = 16;
 
-        public static readonly string[] Names = { L.T("节能", "Power saver"), L.T("平衡", "Balanced"), L.T("高性能", "High perf.") };
-        // Windows 自带的三个电源计划，GUID 在所有电脑上都一样
-        static readonly Guid[] Guids = {
-            new Guid("a1841308-3541-4fab-bc81-f71556f20b4a"),
-            new Guid("381b4222-f694-41f0-9685-ff5bb260df2e"),
-            new Guid("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c")
-        };
+        // Windows 模板计划的 GUID（所有电脑都一样）
+        static readonly Guid SAVER = new Guid("a1841308-3541-4fab-bc81-f71556f20b4a");
+        static readonly Guid BALANCED = new Guid("381b4222-f694-41f0-9685-ff5bb260df2e");
+        static readonly Guid HIGH = new Guid("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c");
+        static readonly Guid ULTIMATE = new Guid("e9a42b02-d5df-448d-aa00-03f14749eb61");
 
-        // 返回 0 节能 / 1 平衡 / 2 高性能，-1 = 用的是别的自定义计划
-        public static int Get()
+        static string Name(Guid g)
         {
+            uint size = 0;
+            PowerReadFriendlyName(IntPtr.Zero, ref g, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, ref size);
+            if (size == 0) return g.ToString().Substring(0, 8);
+            IntPtr buf = Marshal.AllocHGlobal((int)size);
             try
             {
-                IntPtr p;
-                if (PowerGetActiveScheme(IntPtr.Zero, out p) != 0) return -1;
-                Guid g = (Guid)Marshal.PtrToStructure(p, typeof(Guid));
-                LocalFree(p);
-                for (int i = 0; i < 3; i++) if (g == Guids[i]) return i;
-                return -1;
-            }
-            catch { return -1; }
-        }
-
-        static bool Exists(Guid target)
-        {
-            IntPtr buf = Marshal.AllocHGlobal(16);
-            try
-            {
-                for (uint i = 0; ; i++)
-                {
-                    uint size = 16;
-                    if (PowerEnumerate(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, ACCESS_SCHEME, i, buf, ref size) != 0) return false;
-                    if ((Guid)Marshal.PtrToStructure(buf, typeof(Guid)) == target) return true;
-                }
+                if (PowerReadFriendlyName(IntPtr.Zero, ref g, IntPtr.Zero, IntPtr.Zero, buf, ref size) != 0) return g.ToString().Substring(0, 8);
+                return Marshal.PtrToStringUni(buf);
             }
             finally { Marshal.FreeHGlobal(buf); }
         }
 
-        // 很多新笔记本把「节能」「高性能」隐藏/删掉了，用 powercfg 按原来的 GUID 恢复
-        static bool Restore(Guid g)
+        static int RankOf(Guid g, string name)
+        {
+            if (g == SAVER) return 0;
+            if (g == BALANCED) return 1;
+            if (g == HIGH) return 2;
+            if (g == ULTIMATE) return 3;
+            string n = name.ToLowerInvariant();
+            if (n.Contains("卓越") || n.Contains("ultimate")) return 3;
+            if (n.Contains("高性能") || n.Contains("high performance")) return 2;
+            if (n.Contains("节能") || n.Contains("省电") || n.Contains("saver")) return 0;
+            if (n.Contains("平衡") || n.Contains("balanced")) return 1;
+            return -1;
+        }
+
+        // 和控制面板「电源选项」里显示的一样，按 节能 → 平衡 → 高性能 → 卓越性能 排序
+        public static List<PlanInfo> List()
+        {
+            List<PlanInfo> list = new List<PlanInfo>();
+            IntPtr buf = Marshal.AllocHGlobal(16);
+            try
+            {
+                for (uint i = 0; i < 32; i++)
+                {
+                    uint size = 16;
+                    if (PowerEnumerate(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, ACCESS_SCHEME, i, buf, ref size) != 0) break;
+                    PlanInfo p = new PlanInfo();
+                    p.Id = (Guid)Marshal.PtrToStructure(buf, typeof(Guid));
+                    p.Name = Name(p.Id);
+                    p.Rank = RankOf(p.Id, p.Name);
+                    list.Add(p);
+                }
+            }
+            catch { }
+            finally { Marshal.FreeHGlobal(buf); }
+            list.Sort(delegate (PlanInfo a, PlanInfo b)
+            {
+                int ra = a.Rank < 0 ? 99 : a.Rank, rb = b.Rank < 0 ? 99 : b.Rank;
+                return ra != rb ? ra.CompareTo(rb) : string.Compare(a.Name, b.Name, StringComparison.Ordinal);
+            });
+            return list;
+        }
+
+        public static Guid Active()
         {
             try
             {
-                ProcessStartInfo psi = new ProcessStartInfo("powercfg.exe", "-duplicatescheme " + g + " " + g);
+                IntPtr p;
+                if (PowerGetActiveScheme(IntPtr.Zero, out p) != 0) return Guid.Empty;
+                Guid g = (Guid)Marshal.PtrToStructure(p, typeof(Guid));
+                LocalFree(p);
+                return g;
+            }
+            catch { return Guid.Empty; }
+        }
+
+        public static bool Activate(Guid g)
+        {
+            try { return PowerSetActiveScheme(IntPtr.Zero, ref g) == 0; }
+            catch { return false; }
+        }
+
+        // 从 Windows 模板复制出一个「节能」计划（会得到一个新的 GUID，控制面板里也能看到）
+        public static bool CreateSaver()
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo("powercfg.exe", "-duplicatescheme " + SAVER);
                 psi.UseShellExecute = false;
                 psi.CreateNoWindow = true;
                 using (Process p = Process.Start(psi)) { p.WaitForExit(5000); }
-                return Exists(g);
+                foreach (PlanInfo p in List()) if (p.Rank == 0) return true;
+                return false;
             }
             catch { return false; }
         }
 
-        // 返回 0 = 成功，1 = 成功（顺便恢复了被隐藏的计划），-1 = 失败
-        public static int Set(int idx)
+        // 按性能模式挑计划：静谧 -> 节能，均衡 -> 平衡，极速 -> 高性能，狂派 -> 卓越性能；没有就找最接近的
+        public static PlanInfo ForMode(List<PlanInfo> plans, int mode)
         {
-            try
-            {
-                Guid g = Guids[idx];
-                int result = 0;
-                if (!Exists(g))
-                {
-                    if (!Restore(g)) return -1;
-                    result = 1;
-                }
-                return PowerSetActiveScheme(IntPtr.Zero, ref g) == 0 ? result : -1;
-            }
-            catch { return -1; }
+            int[][] prefs = {
+                new int[] { 0, 1 },
+                new int[] { 1 },
+                new int[] { 2, 3, 1 },
+                new int[] { 3, 2, 1 }
+            };
+            if (mode < 0 || mode > 3) return null;
+            foreach (int r in prefs[mode])
+                foreach (PlanInfo p in plans)
+                    if (p.Rank == r) return p;
+            return null;
         }
     }
 
