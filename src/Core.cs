@@ -571,8 +571,8 @@ namespace RedmiHelper
     {
         public static bool Dark;
         public static int Choice;   // 0 跟随系统 1 浅色 2 深色
-        public static Color Back, Fore, Gray, Btn, Border, GraphBack;
-        public static readonly Color Accent = Color.FromArgb(31, 111, 235);
+        public static Color Back, CardBack, Fore, Gray, Btn, Border, GraphBack;
+        public static readonly Color Accent = Color.FromArgb(10, 132, 255);
         public static readonly Color Red = Color.FromArgb(220, 60, 60);
 
         [DllImport("dwmapi.dll")]
@@ -598,15 +598,17 @@ namespace RedmiHelper
             Dark = Choice == 2 || (Choice == 0 && SystemDark());
             if (Dark)
             {
-                Back = Color.FromArgb(32, 32, 32); Fore = Color.FromArgb(235, 235, 235);
-                Gray = Color.FromArgb(150, 150, 150); Btn = Color.FromArgb(55, 55, 55);
-                Border = Color.FromArgb(85, 85, 85); GraphBack = Color.FromArgb(42, 42, 42);
+                Back = Color.FromArgb(24, 24, 27); CardBack = Color.FromArgb(38, 38, 42);
+                Fore = Color.FromArgb(242, 242, 247); Gray = Color.FromArgb(152, 152, 160);
+                Btn = Color.FromArgb(56, 56, 62); Border = Color.FromArgb(62, 62, 68);
+                GraphBack = CardBack;
             }
             else
             {
-                Back = Color.FromArgb(243, 243, 243); Fore = Color.FromArgb(25, 25, 25);
-                Gray = Color.FromArgb(110, 110, 110); Btn = Color.White;
-                Border = Color.FromArgb(200, 200, 200); GraphBack = Color.White;
+                Back = Color.FromArgb(242, 242, 247); CardBack = Color.White;
+                Fore = Color.FromArgb(28, 28, 30); Gray = Color.FromArgb(110, 110, 118);
+                Btn = Color.FromArgb(232, 232, 237); Border = Color.FromArgb(222, 222, 228);
+                GraphBack = CardBack;
             }
         }
 
@@ -616,14 +618,18 @@ namespace RedmiHelper
             Label l = c as Label;
             CheckBox cb = c as CheckBox;
             if (c is Graph) c.Invalidate();
-            else if (c is Form || c is Panel) c.BackColor = Back;
+            else if (c is Card) c.BackColor = CardBack;
+            else if (c is Form) c.BackColor = Back;
+            else if (c is Panel) c.BackColor = c.Parent != null ? c.Parent.BackColor : Back;   // 透明容器沿用外层颜色
 
             if (b != null)
             {
                 b.FlatStyle = FlatStyle.Flat;
                 b.FlatAppearance.BorderColor = Border;
+                b.FlatAppearance.BorderSize = b is RoundButton ? 0 : 1;
                 b.BackColor = Btn;
                 b.ForeColor = Fore;
+                b.Invalidate();
             }
             else if (l != null)
             {
@@ -631,7 +637,7 @@ namespace RedmiHelper
                 l.ForeColor = t == "gray" ? Gray : (t == "red" ? Red : Fore);
                 l.BackColor = Color.Transparent;
             }
-            else if (cb != null) cb.ForeColor = Fore;
+            else if (cb != null) { cb.ForeColor = Fore; cb.Invalidate(); }
             else if (c is ComboBox || c is NumericUpDown || c is ListBox)
             {
                 c.BackColor = Btn;

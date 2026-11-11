@@ -3,6 +3,7 @@
 
 using System;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -30,22 +31,23 @@ namespace RedmiHelper
             StartPosition = FormStartPosition.Manual;
             AutoScaleMode = AutoScaleMode.None;
             Font = new Font("Microsoft YaHei UI", 9F);
-            ClientSize = Z(300, 150);
+            ClientSize = Z(312, 168);
+            Icon = Draw.AppIcon();
 
             lblTop = new Label();
-            lblTop.Font = new Font("Microsoft YaHei UI", 10.5F, FontStyle.Bold);
-            lblTop.Location = P(12, 10);
-            lblTop.Size = Z(276, 26);
+            lblTop.Font = new Font("Microsoft YaHei UI", 11F, FontStyle.Bold);
+            lblTop.Location = P(14, 12);
+            lblTop.Size = Z(284, 26);
+            lblTop.BackColor = Color.Transparent;
             Controls.Add(lblTop);
 
             for (int i = 0; i < 4; i++)
             {
-                Button b = new Button();
+                Button b = new RoundButton();
                 b.Text = MainForm.ModeNames[i];
                 b.Tag = i;
-                b.FlatStyle = FlatStyle.Flat;
-                b.Location = P(12 + i * 70, 40);
-                b.Size = Z(66, 36);
+                b.Location = P(14 + i * 72, 46);
+                b.Size = Z(68, 38);
                 b.Click += delegate (object s, EventArgs e) { main.SetMode((int)((Button)s).Tag, true); };
                 Controls.Add(b);
                 btns[i] = b;
@@ -53,19 +55,30 @@ namespace RedmiHelper
 
             lblInfo = new Label();
             lblInfo.Tag = "gray";
-            lblInfo.Location = P(12, 84);
-            lblInfo.Size = Z(276, 22);
+            lblInfo.Location = P(14, 92);
+            lblInfo.Size = Z(284, 22);
+            lblInfo.Font = new Font("Microsoft YaHei UI", 8.5F);
+            lblInfo.BackColor = Color.Transparent;
             Controls.Add(lblInfo);
 
-            Button open = new Button();
+            Button open = new RoundButton();
             open.Text = L.T("打开完整窗口", "Open full window");
-            open.FlatStyle = FlatStyle.Flat;
-            open.Location = P(12, 110);
-            open.Size = Z(276, 30);
+            open.Location = P(14, 120);
+            open.Size = Z(284, 34);
             open.Click += delegate { Hide(); main.ShowMain(); };
             Controls.Add(open);
 
             Deactivate += delegate { Hide(); main.PopupHiddenAt = DateTime.Now; };
+        }
+
+        [DllImport("dwmapi.dll")]
+        static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int val, int size);
+
+        // Windows 11 上让无边框小窗也有圆角和阴影
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            try { int round = 2; DwmSetWindowAttribute(Handle, 33, ref round, 4); } catch { }
         }
 
         public void ShowNear()

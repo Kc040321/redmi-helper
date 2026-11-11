@@ -18,7 +18,7 @@ namespace RedmiHelper
 {
     class MainForm : Form
     {
-        public const string Version = "1.3.1";
+        public const string Version = "1.4";
 
         public static readonly string[] ModeNames = { L.T("静谧", "Silent"), L.T("均衡", "Balanced"), L.T("极速", "Turbo"), L.T("狂派", "Beast") };
         static readonly byte[] ModeValues = { 2, 1, 3, 4 };
@@ -41,7 +41,8 @@ namespace RedmiHelper
 
         // ---- 界面 ----
         float sc = 1F;
-        Font fBig, fHead;
+        Font fBig, fHead, fSmall;
+        ToolTip tips = new ToolTip();
         Label lblCpu, lblGpu, lblFanA, lblFanB, lblBat, lblStatus;
         Label lblGpuNote, lblAuto, lblHz, lblGames, lblCtrlKey, lblNv, lblNvApps, lblHealth;
         Button[] tabButtons = new Button[4];
@@ -92,30 +93,37 @@ namespace RedmiHelper
             AutoScaleMode = AutoScaleMode.None;
             using (Graphics dg = CreateGraphics()) sc = dg.DpiX / 96F;
             Font = new Font("Microsoft YaHei UI", 9F);
-            fBig = new Font("Microsoft YaHei UI", 12F, FontStyle.Bold);
-            fHead = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+            fBig = new Font("Microsoft YaHei UI", 22F, FontStyle.Bold);
+            fHead = new Font("Microsoft YaHei UI", 9.5F, FontStyle.Bold);
+            fSmall = new Font("Microsoft YaHei UI", 8.5F);
+            Icon = Draw.AppIcon();
             Text = "Redmi Helper";
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = Z(340, 596);
+            ClientSize = Z(360, 652);
 
-            // 顶部：温度 / 风扇 / 电池（所有页面都显示）
-            lblCpu = AddLabel(this, "CPU  --°C", 16, 10, 150, 30, fBig, null);
-            lblGpu = AddLabel(this, "GPU  --°C", 176, 10, 150, 30, fBig, null);
-            lblFanA = AddLabel(this, L.T("风扇A  -- RPM", "Fan A  -- RPM"), 16, 42, 150, 22, null, null);
-            lblFanB = AddLabel(this, L.T("风扇B  -- RPM", "Fan B  -- RPM"), 176, 42, 150, 22, null, null);
-            lblBat = AddLabel(this, L.T("电池 --", "Battery --"), 16, 64, 310, 22, null, "gray");
+            // 顶部卡片：温度 / 风扇 / 电池（所有页面都显示）
+            Card head = AddCard(this, 12, 12, 336, 104);
+            AddLabel(head, "CPU", 16, 10, 80, 18, fSmall, "gray");
+            lblCpu = AddLabel(head, "--°C", 12, 26, 100, 46, fBig, null);
+            AddLabel(head, "GPU", 114, 10, 80, 18, fSmall, "gray");
+            lblGpu = AddLabel(head, "--°C", 110, 26, 100, 46, fBig, null);
+            AddLabel(head, L.T("风扇", "Fans"), 216, 10, 100, 18, fSmall, "gray");
+            lblFanA = AddLabel(head, "A  -- RPM", 216, 32, 108, 20, null, null);
+            lblFanB = AddLabel(head, "B  -- RPM", 216, 54, 108, 20, null, null);
+            lblBat = AddLabel(head, L.T("电池 --", "Battery --"), 16, 78, 308, 20, fSmall, "gray");
 
-            // 分页按钮
+            // 分页：分段式按钮
+            Card tabs = AddCard(this, 12, 124, 336, 40);
             for (int i = 0; i < 4; i++)
             {
-                Button b = AddButton(this, TabNames[i], 12 + i * 80, 92, 76, 30, i);
+                Button b = AddButton(tabs, TabNames[i], 4 + i * 82, 4, 80, 32, i);
                 b.Click += OnTab;
                 tabButtons[i] = b;
                 Panel p = new Panel();
-                p.Location = P(0, 130);
-                p.Size = Z(340, 418);
+                p.Location = P(0, 172);
+                p.Size = Z(360, 440);
                 p.Visible = i == 0;
                 Controls.Add(p);
                 pages[i] = p;
@@ -126,7 +134,7 @@ namespace RedmiHelper
             BuildAuto(pages[2]);
             BuildSettings(pages[3]);
 
-            lblStatus = AddLabel(this, "", 16, 550, 310, 44, null, "gray");
+            lblStatus = AddLabel(this, "", 18, 616, 324, 34, fSmall, "gray");
             ResumeLayout(false);
 
             BuildTray();
@@ -171,29 +179,55 @@ namespace RedmiHelper
             l.Location = P(x, y);
             l.Size = Z(w, h);
             l.Tag = tag;
+            l.BackColor = Color.Transparent;
             if (f != null) l.Font = f;
             parent.Controls.Add(l);
             return l;
         }
 
+        Label Head(Control card, string text)
+        {
+            return AddLabel(card, text, 14, 10, 200, 22, fHead, null);
+        }
+
+        Label Hint(Control card, string text, int x, int y, int w)
+        {
+            Label l = AddLabel(card, text, x, y, w, 20, fSmall, "gray");
+            l.TextAlign = ContentAlignment.MiddleRight;
+            return l;
+        }
+
+        Card AddCard(Control parent, int x, int y, int w, int h)
+        {
+            Card c = new Card();
+            c.Location = P(x, y);
+            c.Size = Z(w, h);
+            parent.Controls.Add(c);
+            return c;
+        }
+
         Button AddButton(Control parent, string text, int x, int y, int w, int h, int tag)
         {
-            Button b = new Button();
+            RoundButton b = new RoundButton();
             b.Text = text;
             b.Location = P(x, y);
             b.Size = Z(w, h);
             b.Tag = tag;
-            b.FlatStyle = FlatStyle.Flat;
             parent.Controls.Add(b);
             return b;
         }
 
         CheckBox AddCheck(Control parent, string text, int x, int y)
         {
-            CheckBox c = new CheckBox();
+            return AddCheck(parent, text, x, y, 322 - x);
+        }
+
+        CheckBox AddCheck(Control parent, string text, int x, int y, int w)
+        {
+            ToggleSwitch c = new ToggleSwitch();
             c.Text = text;
             c.Location = P(x, y);
-            c.AutoSize = true;
+            c.Size = Z(w, 26);
             parent.Controls.Add(c);
             return c;
         }
@@ -215,7 +249,7 @@ namespace RedmiHelper
             NumericUpDown n = new NumericUpDown();
             n.Minimum = 0; n.Maximum = max;
             n.Location = P(x, y);
-            n.Width = (int)(46 * sc);
+            n.Width = (int)(42 * sc);
             n.BorderStyle = BorderStyle.FixedSingle;
             parent.Controls.Add(n);
             return n;
@@ -223,122 +257,130 @@ namespace RedmiHelper
 
         void BuildHome(Panel p)
         {
-            AddLabel(p, L.T("性能模式　（快捷键 Ctrl+Alt+M 循环切换）", "Performance mode  (Ctrl+Alt+M to cycle)"), 16, 0, 310, 22, fHead, null);
+            Card c1 = AddCard(p, 12, 0, 336, 88);
+            Head(c1, L.T("性能模式", "Performance mode"));
+            Hint(c1, "Ctrl+Alt+M", 200, 11, 122);
             for (int i = 0; i < 4; i++)
             {
-                Button b = AddButton(p, ModeNames[i], 12 + i * 80, 24, 76, 36, i);
+                Button b = AddButton(c1, ModeNames[i], 14 + i * 78, 38, 74, 38, i);
                 b.Click += delegate (object s, EventArgs e) { SetMode((int)((Button)s).Tag, true); };
                 modeButtons[i] = b;
             }
 
-            AddLabel(p, L.T("显卡模式", "GPU mode"), 16, 72, 200, 22, fHead, null);
+            Card c2 = AddCard(p, 12, 96, 336, 104);
+            Head(c2, L.T("显卡模式", "GPU mode"));
             for (int i = 0; i < 2; i++)
             {
-                Button b = AddButton(p, GpuNames[i], 12 + i * 160, 96, 156, 36, i);
+                Button b = AddButton(c2, GpuNames[i], 14 + i * 157, 38, 151, 38, i);
                 b.Click += OnGpuButton;
                 gpuButtons[i] = b;
             }
-            lblGpuNote = AddLabel(p, "", 16, 136, 310, 22, null, "red");
+            lblGpuNote = AddLabel(c2, "", 14, 80, 308, 20, fSmall, "red");
 
-            AddLabel(p, L.T("电源计划", "Power plan"), 16, 162, 200, 22, fHead, null);
+            Card c3 = AddCard(p, 12, 208, 336, 88);
+            Head(c3, L.T("电源计划", "Power plan"));
             planRow = new Panel();
-            planRow.Location = P(12, 186);
-            planRow.Size = Z(318, 36);
-            p.Controls.Add(planRow);
+            planRow.Location = P(14, 38);
+            planRow.Size = Z(308, 38);
+            c3.Controls.Add(planRow);
 
-            AddLabel(p, L.T("按键", "Keys"), 16, 234, 200, 22, fHead, null);
-            chkFn = AddCheck(p, L.T("Fn 锁", "Fn lock"), 16, 258);
-            chkTouchpad = AddCheck(p, L.T("锁触控板", "Lock touchpad"), 120, 258);
-            chkWin = AddCheck(p, L.T("锁 Win 键", "Lock Win key"), 228, 258);
+            Card c4 = AddCard(p, 12, 304, 336, 128);
+            Head(c4, L.T("快捷开关", "Quick toggles"));
+            chkFn = AddCheck(c4, L.T("Fn 锁", "Fn lock"), 14, 36, 150);
+            chkTouchpad = AddCheck(c4, L.T("锁触控板", "Lock touchpad"), 172, 36, 150);
+            chkWin = AddCheck(c4, L.T("锁 Win 键", "Lock Win key"), 14, 64, 150);
+            chkTurboOff = AddCheck(c4, L.T("关闭睿频", "Turbo off"), 172, 64, 150);
+            tips.SetToolTip(chkTurboOff, L.T("更凉、更安静、更省电，峰值性能下降", "Cooler, quieter, longer battery life; lower peak speed"));
             chkFn.CheckedChanged += delegate { if (!updatingUI) SetKey(Mi.KEY_FN, chkFn.Checked, L.T("Fn 锁", "Fn lock")); };
             chkTouchpad.CheckedChanged += delegate { if (!updatingUI) SetKey(Mi.KEY_TOUCHPAD, chkTouchpad.Checked, L.T("触控板锁", "Touchpad lock")); };
             chkWin.CheckedChanged += delegate { if (!updatingUI) SetKey(Mi.KEY_WIN, chkWin.Checked, L.T("Win 键锁", "Win key lock")); };
-
-            AddLabel(p, L.T("CPU 睿频", "CPU turbo boost"), 16, 292, 200, 22, fHead, null);
-            chkTurboOff = AddCheck(p, L.T("关闭睿频（更凉、更安静、更省电，峰值性能下降）", "Disable turbo (cooler, quieter, less peak speed)"), 16, 314);
             chkTurboOff.CheckedChanged += delegate { if (!updatingUI) SetTurbo(!chkTurboOff.Checked, true); };
 
-            AddLabel(p, L.T("自动切换", "Automation"), 16, 348, 80, 22, fHead, null);
-            lblAuto = AddLabel(p, L.T("未启用", "Off"), 96, 348, 230, 22, null, "gray");
-            lblHz = AddLabel(p, L.T("屏幕 --Hz", "Display --Hz"), 16, 372, 310, 22, null, "gray");
+            lblAuto = AddLabel(c4, "", 14, 100, 196, 20, fSmall, "gray");
+            lblHz = Hint(c4, "", 204, 100, 118);
         }
 
         void BuildMonitor(Panel p)
         {
-            graph = new Graph();
-            graph.Location = P(12, 0);
-            graph.Size = Z(316, 160);
-            graph.Data = history;
-            p.Controls.Add(graph);
-
-            chkCsv = AddCheck(p, L.T("持续记录到 CSV（logs 文件夹）", "Log to CSV (logs folder)"), 16, 166);
-            Button exp = AddButton(p, L.T("导出曲线…", "Export..."), 228, 164, 100, 26, -1);
+            Card g1 = AddCard(p, 12, 0, 336, 236);
+            Head(g1, L.T("温度与风扇", "Temps & fans"));
+            Button exp = AddButton(g1, L.T("导出…", "Export..."), 238, 8, 84, 26, -1);
             exp.Click += delegate { ExportCsv(); };
+            graph = new Graph();
+            graph.Location = P(8, 38);
+            graph.Size = Z(320, 160);
+            graph.Data = history;
+            g1.Controls.Add(graph);
+            chkCsv = AddCheck(g1, L.T("持续记录到 CSV（logs 文件夹）", "Log to CSV (logs folder)"), 14, 202);
 
-            AddLabel(p, L.T("独显", "dGPU"), 16, 198, 60, 22, fHead, null);
-            AddLabel(p, L.T("（只在打开这一页时读取，避免唤醒独显）", "(read only on this page to avoid waking it)"), 60, 198, 268, 22, null, "gray");
-            lblNv = AddLabel(p, L.T("读取中……", "Loading..."), 16, 220, 312, 58, null, null);
-            AddLabel(p, L.T("正在使用独显的程序", "Apps using the dGPU"), 16, 282, 200, 22, fHead, null);
-            lblNvApps = AddLabel(p, "--", 16, 304, 312, 40, null, null);
+            Card g2 = AddCard(p, 12, 244, 336, 120);
+            Head(g2, L.T("独显", "dGPU"));
+            Hint(g2, L.T("仅在本页读取，避免唤醒独显", "Read only on this page"), 100, 11, 222);
+            lblNv = AddLabel(g2, L.T("读取中……", "Loading..."), 14, 34, 308, 56, null, null);
+            AddLabel(g2, L.T("使用中", "In use"), 14, 93, 56, 20, fSmall, "gray");
+            lblNvApps = AddLabel(g2, "--", 70, 93, 252, 20, fSmall, null);
 
-            AddLabel(p, L.T("电池健康", "Battery health"), 16, 350, 200, 22, fHead, null);
-            lblHealth = AddLabel(p, "--", 16, 372, 312, 42, null, null);
+            Card g3 = AddCard(p, 12, 372, 336, 68);
+            Head(g3, L.T("电池健康", "Battery health"));
+            lblHealth = AddLabel(g3, "--", 14, 32, 308, 34, fSmall, null);
         }
 
         void BuildAuto(Panel p)
         {
-            AddLabel(p, L.T("智能模式", "Smart mode"), 16, 0, 200, 22, fHead, null);
-            chkSmart = AddCheck(p, L.T("根据 CPU 负载和温度自动切换", "Switch by CPU load and temperature"), 16, 22);
-            AddLabel(p, L.T("平时", "Normal"), 16, 52, 40, 22, null, null);
-            cmbLow = AddCombo(p, ModeNames, 56, 49, 76);
-            AddLabel(p, L.T("高负载时", "Heavy load"), 150, 52, 70, 22, null, null);
-            cmbHigh = AddCombo(p, ModeNames, 222, 49, 76);
+            Card a1 = AddCard(p, 12, 0, 336, 100);
+            Head(a1, L.T("智能模式", "Smart mode"));
+            chkSmart = AddCheck(a1, L.T("根据负载和温度自动切换", "Switch by CPU load and temperature"), 14, 34);
+            AddLabel(a1, L.T("平时", "Normal"), 14, 70, 44, 22, null, null);
+            cmbLow = AddCombo(a1, ModeNames, 60, 66, 90);
+            AddLabel(a1, L.T("高负载", "Heavy"), 168, 70, 56, 22, null, null);
+            cmbHigh = AddCombo(a1, ModeNames, 228, 66, 94);
 
-            AddLabel(p, L.T("定时规则", "Schedule"), 16, 88, 200, 22, fHead, null);
-            chkSched = AddCheck(p, L.T("每天", "Daily"), 16, 112);
-            nSh = AddNum(p, 74, 110, 23);
-            AddLabel(p, ":", 122, 113, 10, 22, null, null);
-            nSm = AddNum(p, 132, 110, 59);
-            AddLabel(p, L.T("到", "to"), 184, 113, 20, 22, null, null);
-            nEh = AddNum(p, 206, 110, 23);
-            AddLabel(p, ":", 254, 113, 10, 22, null, null);
-            nEm = AddNum(p, 264, 110, 59);
-            AddLabel(p, L.T("切换到", "Use mode"), 16, 146, 50, 22, null, null);
-            cmbSched = AddCombo(p, ModeNames, 70, 143, 90);
+            Card a2 = AddCard(p, 12, 108, 336, 100);
+            Head(a2, L.T("定时规则", "Schedule"));
+            Hint(a2, L.T("切换到", "Use"), 150, 11, 74);
+            cmbSched = AddCombo(a2, ModeNames, 228, 8, 94);
+            chkSched = AddCheck(a2, L.T("每天按时间切换", "Switch at set times daily"), 14, 36);
+            nSh = AddNum(a2, 14, 66, 23);
+            AddLabel(a2, ":", 58, 69, 8, 22, null, null);
+            nSm = AddNum(a2, 66, 66, 59);
+            AddLabel(a2, L.T("到", "to"), 114, 69, 24, 22, null, null);
+            nEh = AddNum(a2, 140, 66, 23);
+            AddLabel(a2, ":", 184, 69, 8, 22, null, null);
+            nEm = AddNum(a2, 192, 66, 59);
 
-            AddLabel(p, L.T("游戏", "Games"), 16, 180, 200, 22, fHead, null);
-            Button bg = AddButton(p, L.T("游戏列表…", "Game list..."), 12, 202, 120, 30, -1);
+            Card a3 = AddCard(p, 12, 216, 336, 64);
+            Head(a3, L.T("游戏", "Games"));
+            lblGames = AddLabel(a3, "", 14, 34, 190, 22, fSmall, "gray");
+            Button bg = AddButton(a3, L.T("游戏列表…", "Game list..."), 206, 14, 116, 36, -1);
             bg.Click += delegate { OpenGames(); };
-            lblGames = AddLabel(p, "", 140, 208, 190, 22, null, "gray");
 
-            AddLabel(p, L.T("电源", "Power"), 16, 242, 200, 22, fHead, null);
-            chkBattery = AddCheck(p, L.T("拔掉电源时切到静谧，插回恢复原模式", "On battery: Silent, restore when plugged in"), 16, 264);
-            chkLink = AddCheck(p, L.T("电源计划跟随性能模式", "Power plan follows performance mode"), 16, 288);
-            chkHz = AddCheck(p, L.T("插电用最高刷新率，用电池切到 60Hz", "Max refresh rate plugged in, 60Hz on battery"), 16, 312);
-            chkTurboAuto = AddCheck(p, L.T("静谧模式或用电池时关闭睿频，其他时候开启", "Turbo off in Silent mode or on battery"), 16, 336);
-
-            AddLabel(p, L.T("优先级：游戏 > 定时 > 智能。你手动切换模式后，自动切换会暂停，直到情况变化（比如游戏关掉、到了定时时间）。", "Priority: games > schedule > smart. After you switch modes manually, automation pauses until something changes (a game closes, the schedule starts or ends)."),
-                16, 364, 312, 52, null, "gray");
+            Card a4 = AddCard(p, 12, 288, 336, 152);
+            Head(a4, L.T("电源", "Power"));
+            chkBattery = AddCheck(a4, L.T("拔掉电源时切到静谧，插回恢复原模式", "On battery: Silent, restore when plugged in"), 14, 34);
+            chkLink = AddCheck(a4, L.T("电源计划跟随性能模式", "Power plan follows performance mode"), 14, 62);
+            chkHz = AddCheck(a4, L.T("插电用最高刷新率，用电池切到 60Hz", "Max refresh rate plugged in, 60Hz on battery"), 14, 90);
+            chkTurboAuto = AddCheck(a4, L.T("静谧模式或用电池时关闭睿频，其他时候开启", "Turbo off in Silent mode or on battery"), 14, 118);
         }
 
         void BuildSettings(Panel p)
         {
-            AddLabel(p, L.T("外观", "Appearance"), 16, 0, 200, 22, fHead, null);
-            AddLabel(p, L.T("主题", "Theme"), 16, 26, 46, 22, null, null);
-            cmbTheme = AddCombo(p, new string[] { L.T("跟随系统", "System"), L.T("浅色", "Light"), L.T("深色", "Dark") }, 64, 23, 100);
-            AddLabel(p, L.T("语言", "Language"), 180, 26, 66, 22, null, null);
-            cmbLang = AddCombo(p, new string[] { L.T("跟随系统", "System"), "中文", "English" }, 248, 23, 80);
+            Card s1 = AddCard(p, 12, 0, 336, 80);
+            Head(s1, L.T("外观", "Appearance"));
+            AddLabel(s1, L.T("主题", "Theme"), 14, 44, 46, 22, null, null);
+            cmbTheme = AddCombo(s1, new string[] { L.T("跟随系统", "System"), L.T("浅色", "Light"), L.T("深色", "Dark") }, 62, 40, 100);
+            AddLabel(s1, L.T("语言", "Language"), 174, 44, 58, 22, null, null);
+            cmbLang = AddCombo(s1, new string[] { L.T("跟随系统", "System"), "中文", "English" }, 232, 40, 90);
 
-            AddLabel(p, L.T("启动", "Startup"), 16, 62, 200, 22, fHead, null);
-            chkAuto = AddCheck(p, L.T("开机自动启动（后台托盘运行）", "Start with Windows (in tray)"), 16, 84);
-
-            AddLabel(p, L.T("键盘", "Keyboard"), 16, 118, 200, 22, fHead, null);
-            Button bl = AddButton(p, L.T("设置控制中心键", "Set Control Center key"), 12, 140, 140, 30, -1);
+            Card s2 = AddCard(p, 12, 88, 336, 116);
+            Head(s2, L.T("启动与按键", "Startup & keys"));
+            chkAuto = AddCheck(s2, L.T("开机自动启动（后台托盘运行）", "Start with Windows (in tray)"), 14, 36);
+            Button bl = AddButton(s2, L.T("设置控制中心键", "Set Control Center key"), 14, 70, 160, 32, -1);
             bl.Click += delegate { learningKey = true; lblStatus.Text = L.T("请按一下键盘上的「控制中心」键……", "Press the Control Center key on your keyboard..."); };
-            lblCtrlKey = AddLabel(p, "", 160, 146, 170, 22, null, "gray");
+            lblCtrlKey = AddLabel(s2, "", 182, 76, 140, 22, fSmall, "gray");
 
-            AddLabel(p, L.T("数据", "Data"), 16, 182, 200, 22, fHead, null);
-            Button bo = AddButton(p, L.T("打开日志文件夹", "Open logs folder"), 12, 204, 140, 30, -1);
+            Card s3 = AddCard(p, 12, 212, 336, 60);
+            AddLabel(s3, L.T("数据", "Data"), 14, 19, 100, 22, fHead, null);
+            Button bo = AddButton(s3, L.T("打开日志文件夹", "Open logs folder"), 172, 12, 150, 36, -1);
             bo.Click += delegate
             {
                 string dir = LogDir();
@@ -346,11 +388,13 @@ namespace RedmiHelper
                 Process.Start("explorer.exe", "\"" + dir + "\"");
             };
 
-            AddLabel(p, L.T("关于", "About"), 16, 246, 200, 22, fHead, null);
-            AddLabel(p, "Redmi Helper v" + Version + L.T("　适用于 Redmi G Pro 2022（Intel）\n", "  for Redmi G Pro 2022 (Intel)\n") +
+            Card s4 = AddCard(p, 12, 280, 336, 160);
+            Head(s4, L.T("关于", "About"));
+            AddLabel(s4, "Redmi Helper v" + Version + L.T("　适用于 Redmi G Pro 2022（Intel）\n", "  for Redmi G Pro 2022 (Intel)\n") +
                         L.T("通过 BIOS 的 WMI 接口控制硬件，命令来自实测和对官方软件的分析。\n", "Controls hardware through the BIOS WMI interface; commands come from testing and analysis of the official app.\n") +
-                        L.T("左键托盘图标打开小窗，双击打开完整窗口。", "Click the tray icon for the mini panel, double-click for the full window."),
-                16, 268, 312, 70, null, "gray");
+                        L.T("左键托盘图标打开小窗，双击打开完整窗口。\n", "Click the tray icon for the mini panel, double-click for the full window.\n") +
+                        L.T("自动切换优先级：游戏 > 定时 > 智能；手动切换后会暂停，直到情况变化。", "Automation priority: games > schedule > smart; a manual switch pauses it until something changes."),
+                14, 34, 308, 120, fSmall, "gray");
         }
 
         void BuildTray()
@@ -449,6 +493,7 @@ namespace RedmiHelper
             Theme.Load();
             Theme.Apply(this);
             Theme.Apply(popup);
+            popup.BackColor = Theme.CardBack;   // 小窗整体用卡片色，看起来更像浮层
             Theme.TitleBar(this);
             UpdateTabs();
             UpdateModeUI();
@@ -480,8 +525,8 @@ namespace RedmiHelper
             for (int i = 0; i < 4; i++)
             {
                 bool on = i == page;
-                tabButtons[i].BackColor = on ? Theme.Accent : Theme.Btn;
-                tabButtons[i].ForeColor = on ? Color.White : Theme.Fore;
+                tabButtons[i].BackColor = on ? Theme.Accent : Theme.CardBack;
+                tabButtons[i].ForeColor = on ? Color.White : Theme.Gray;
                 pages[i].Visible = on;
             }
         }
@@ -515,10 +560,10 @@ namespace RedmiHelper
                     fanB = r[6] + 256 * r[7];
                     cpuTemp = r[10];
                     gpuTemp = r[14];
-                    lblCpu.Text = "CPU  " + cpuTemp + "°C";
-                    lblGpu.Text = "GPU  " + gpuTemp + "°C";
-                    lblFanA.Text = L.T("风扇A  ", "Fan A  ") + fanA + " RPM";
-                    lblFanB.Text = L.T("风扇B  ", "Fan B  ") + fanB + " RPM";
+                    lblCpu.Text = cpuTemp + "°C";
+                    lblGpu.Text = gpuTemp + "°C";
+                    lblFanA.Text = "A   " + fanA + " RPM";
+                    lblFanB.Text = "B   " + fanB + " RPM";
                 }
 
                 byte[] m = Mi.Get(Mi.CMD_PERF);
@@ -653,7 +698,7 @@ namespace RedmiHelper
             {
                 string a = Nvidia.Status();
                 string b = Nvidia.Apps();
-                if (bootGpuMode == 1) b = L.T("独显直连模式下所有程序都用独显\n", "In dGPU-only mode every app uses the dGPU\n") + b;
+                if (bootGpuMode == 1) b = L.T("独显直连：所有程序", "dGPU only: all apps");
                 try
                 {
                     BeginInvoke(new MethodInvoker(delegate
@@ -788,16 +833,16 @@ namespace RedmiHelper
                 int n = Math.Min(plans.Count, hasSaver ? 4 : 3);
                 int slots = n + (hasSaver ? 0 : 1);
                 int gap = 5;
-                int w = (318 - gap * (slots - 1)) / Math.Max(1, slots);
+                int w = (308 - gap * (slots - 1)) / Math.Max(1, slots);
                 for (int i = 0; i < n; i++)
                 {
-                    Button b = AddButton(planRow, plans[i].Name, i * (w + gap), 0, w, 36, i);
+                    Button b = AddButton(planRow, plans[i].Name, i * (w + gap), 0, w, 38, i);
                     b.Click += OnPlanButton;
                     planButtons.Add(b);
                 }
                 if (!hasSaver)
                 {
-                    Button add = AddButton(planRow, L.T("+ 节能", "+ Saver"), n * (w + gap), 0, w, 36, -1);
+                    Button add = AddButton(planRow, L.T("+ 节能", "+ Saver"), n * (w + gap), 0, w, 38, -1);
                     add.Click += delegate
                     {
                         lblStatus.Text = PowerPlan.CreateSaver()
@@ -982,9 +1027,11 @@ namespace RedmiHelper
         void UpdateAutoLabel()
         {
             if (lblAuto == null) return;
-            if (autoReason == "") lblAuto.Text = (chkSmart.Checked || chkSched.Checked || GameList().Length > 0) ? L.T("待命中", "Standing by") : L.T("未启用", "Off");
-            else if (manualPaused) lblAuto.Text = autoReason + L.T("（已手动暂停）", " (paused manually)");
-            else lblAuto.Text = autoReason;
+            string t;
+            if (autoReason == "") t = (chkSmart.Checked || chkSched.Checked || GameList().Length > 0) ? L.T("待命中", "Standing by") : L.T("未启用", "Off");
+            else if (manualPaused) t = autoReason + L.T("（已手动暂停）", " (paused manually)");
+            else t = autoReason;
+            lblAuto.Text = L.T("自动切换：", "Automation: ") + t;
         }
 
         void OpenGames()
